@@ -46,7 +46,7 @@ export default function Footer() {
             <Link to="/" className="flex items-center gap-2 mb-2">
               <span className="text-2xl font-bold text-[#00c853]">Vichaar</span>
             </Link>
-            <p className="font-bold text-white mb-6">The World's Largest Prediction Market™</p>
+
           </div>
 
           {/* Links Grid */}
