@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Leaderboard() {
   const [traders, setTraders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8,7 +11,7 @@ export default function Leaderboard() {
   useEffect(() => {
     async function fetchLeaderboard() {
       try {
-        const res = await fetch("http://localhost:5000/api/user/leaderboard");
+        const res = await fetch(`${API_URL}/api/user/leaderboard`);
         const data = await res.json();
         if (data.success) {
           setTraders(data.leaderboard);

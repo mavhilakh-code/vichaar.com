@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Portfolio() {
   const navigate = useNavigate();
   const [data, setData] = useState({ liquid_points: 0, positions: [] });
@@ -20,7 +23,7 @@ export default function Portfolio() {
       }
       const user = JSON.parse(userStr);
 
-      const res = await fetch(`http://localhost:5000/api/user/portfolio/${user.user_id}`);
+      const res = await fetch(`${API_URL}/api/user/portfolio/${user.user_id}`);
       const result = await res.json();
       
       if (result.success) {
@@ -40,7 +43,7 @@ export default function Portfolio() {
       if (!userStr) return;
       const user = JSON.parse(userStr);
 
-      const res = await fetch(`http://localhost:5000/api/user/claim-bonus`, {
+      const res = await fetch(`${API_URL}/api/user/claim-bonus`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.user_id })

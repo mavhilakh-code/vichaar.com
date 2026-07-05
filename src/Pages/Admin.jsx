@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Calendar, Image as ImageIcon, Tag, Hash, HelpCircle } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Admin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -24,7 +27,7 @@ export default function Admin() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/markets/create", {
+      const res = await fetch(`${API_URL}/api/markets/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

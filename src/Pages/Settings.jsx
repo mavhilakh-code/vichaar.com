@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings as SettingsIcon, User, Save, Mail, Lock } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Settings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -41,7 +44,7 @@ export default function Settings() {
 
     try {
       // 1. Update Display Name
-      const profileRes = await fetch("http://localhost:5000/api/user/profile/update", {
+      const profileRes = await fetch(`${API_URL}/api/user/profile/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -54,7 +57,7 @@ export default function Settings() {
 
       // 2. Update Email (if changed)
       if (formData.email !== user.email) {
-        const emailRes = await fetch("http://localhost:5000/api/user/profile/email", {
+        const emailRes = await fetch(`${API_URL}/api/user/profile/email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -68,7 +71,7 @@ export default function Settings() {
 
       // 3. Update Password (if provided)
       if (formData.old_password && formData.new_password) {
-        const passRes = await fetch("http://localhost:5000/api/user/profile/password", {
+        const passRes = await fetch(`${API_URL}/api/user/profile/password`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

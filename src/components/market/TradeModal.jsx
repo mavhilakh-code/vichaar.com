@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import MarketChart from './MarketChart';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function TradeModal({ isOpen, onClose, market, tradeType, onVoteSuccess }) {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,7 +28,7 @@ export default function TradeModal({ isOpen, onClose, market, tradeType, onVoteS
       }
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://localhost:5000/api/markets/vote", {
+      const res = await fetch(`${API_URL}/api/markets/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

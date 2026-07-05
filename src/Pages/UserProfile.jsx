@@ -4,6 +4,9 @@ import { ArrowUpRight, ArrowDownRight, Clock, Trophy, Target, TrendingUp, Activi
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function UserProfile() {
   const { username } = useParams();
   const [profile, setProfile] = useState(null);
@@ -13,7 +16,7 @@ export default function UserProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/user/profile/${username}`);
+        const res = await fetch(`${API_URL}/api/user/profile/${username}`);
         const data = await res.json();
         if (data.success) {
           setProfile(data.profile);

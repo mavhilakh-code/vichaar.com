@@ -3,12 +3,15 @@ import { Link } from 'react-router-dom';
 import { MessageCircle, ArrowUpRight, ArrowDownRight, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function ActivityFeed() {
   const [activities, setActivities] = useState([]);
 
   const fetchActivity = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/markets/activity");
+      const res = await fetch(`${API_URL}/api/markets/activity`);
       const data = await res.json();
       if (data.success) {
         setActivities(data.activities);

@@ -4,6 +4,9 @@ import { supabase } from '../services/supabase';
 import MarketChart from '../components/market/MarketChart';
 import { Calendar, Share, Copy, Info, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Market() {
   const { market_id } = useParams();
   const [market, setMarket] = useState(null);
@@ -33,7 +36,7 @@ export default function Market() {
 
       // Load comments
       try {
-        const res = await fetch(`http://localhost:5000/api/comments/${market_id}`);
+        const res = await fetch(`${API_URL}/api/comments/${market_id}`);
         const data = await res.json();
         if (data.success) {
           setComments(data.comments);
@@ -108,7 +111,7 @@ export default function Market() {
       if (!userStr) throw new Error("Please login to trade.");
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://localhost:5000/api/markets/vote", {
+      const res = await fetch(`${API_URL}/api/markets/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -141,7 +144,7 @@ export default function Market() {
       if (!userStr) throw new Error("Please login to comment.");
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://localhost:5000/api/comments", {
+      const res = await fetch(`${API_URL}/api/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -162,7 +165,7 @@ export default function Market() {
       }
       
       // Immediately refetch comments to update the UI
-      const refreshRes = await fetch(`http://localhost:5000/api/comments/${market.id}`);
+      const refreshRes = await fetch(`${API_URL}/api/comments/${market.id}`);
       const refreshData = await refreshRes.json();
       if (refreshData.success) {
         setComments(refreshData.comments);

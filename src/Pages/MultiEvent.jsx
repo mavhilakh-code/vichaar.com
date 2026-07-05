@@ -4,6 +4,9 @@ import { supabase } from '../services/supabase';
 import { Trophy, Info, Calendar } from 'lucide-react';
 import MultiMarketChart from '../components/market/MultiMarketChart';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function MultiEvent() {
   const { event_id } = useParams();
   const [markets, setMarkets] = useState([]);
@@ -41,7 +44,7 @@ export default function MultiEvent() {
 
         // Load comments
         try {
-          const res = await fetch(`http://localhost:5000/api/comments/${stableId}`);
+          const res = await fetch(`${API_URL}/api/comments/${stableId}`);
           const data = await res.json();
           if (data.success) {
             setComments(data.comments);
@@ -137,7 +140,7 @@ export default function MultiEvent() {
       if (!userStr) throw new Error("Please login to trade.");
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://localhost:5000/api/markets/vote", {
+      const res = await fetch(`${API_URL}/api/markets/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,7 +184,7 @@ export default function MultiEvent() {
       if (!userStr) throw new Error("Please login to comment.");
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://localhost:5000/api/comments", {
+      const res = await fetch(`${API_URL}/api/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

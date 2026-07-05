@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronUp, Trophy, Target } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function SportsMatchRow({ market }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [tradeType, setTradeType] = useState('YES');
@@ -39,7 +42,7 @@ export default function SportsMatchRow({ market }) {
       if (!userStr) throw new Error("Please login to trade.");
       const user = JSON.parse(userStr);
 
-      const res = await fetch("http://localhost:5000/api/markets/vote", {
+      const res = await fetch(`${API_URL}/api/markets/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

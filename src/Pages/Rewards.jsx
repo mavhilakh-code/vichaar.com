@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gift, Sparkles, CheckCircle2 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Rewards() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -22,7 +25,7 @@ export default function Rewards() {
     setClaimStatus({ success: false, message: '' });
 
     try {
-      const res = await fetch("http://localhost:5000/api/user/claim-bonus", {
+      const res = await fetch(`${API_URL}/api/user/claim-bonus`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.user_id })

@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle2, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Notifications() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -26,7 +29,7 @@ export default function Notifications() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/user/notifications?user_id=${user.user_id}`);
+      const res = await fetch(`${API_URL}/api/user/notifications?user_id=${user.user_id}`);
       const data = await res.json();
       if (data.success) {
         setNotifications(data.notifications);
@@ -42,7 +45,7 @@ export default function Notifications() {
 
   const markAsRead = async () => {
     try {
-      await fetch("http://localhost:5000/api/user/notifications/read", {
+      await fetch(`${API_URL}/api/user/notifications/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.user_id })

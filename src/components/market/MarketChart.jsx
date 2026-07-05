@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function MarketChart({ marketId, currentYes, compact = false }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8,7 +11,7 @@ export default function MarketChart({ marketId, currentYes, compact = false }) {
   useEffect(() => {
     async function loadHistory() {
       try {
-        const res = await fetch(`http://localhost:5000/api/charts/${marketId}`);
+        const res = await fetch(`${API_URL}/api/charts/${marketId}`);
         const result = await res.json();
         if (result.success) {
           // If the market has no trades, just show a flat line from 50 to current

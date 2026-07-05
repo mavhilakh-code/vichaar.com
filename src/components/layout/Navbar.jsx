@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Settings, Bell } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+
 export default function Navbar() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -22,7 +25,7 @@ export default function Navbar() {
 
   const fetchUnreadCount = async (userId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/user/notifications?user_id=${userId}`);
+      const res = await fetch(`${API_URL}/api/user/notifications?user_id=${userId}`);
       const data = await res.json();
       if (data.success) {
         const unread = data.notifications.filter(n => !n.is_read).length;
