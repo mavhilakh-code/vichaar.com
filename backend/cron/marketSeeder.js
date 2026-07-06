@@ -155,17 +155,7 @@ async function seedCricketMarkets() {
 }
 
 async function seedAllMarkets() {
-  await seedPoliticsMarkets();
-  await seedEconomicsMarkets();
-  await seedIMFMarkets();
-  await seedFinanceMarkets();
-  await seedWikipediaMarkets();
-  await seedSpaceMarkets();
-  await seedCongressMarkets();
   await seedWeatherMarkets();
-  await seedIndiaGovMarkets();
-  await seedGeminiTrendingMarkets();
-  await seedNasaMarkets();
 }
 
 export const startCronJobs = async (cronString) => {
