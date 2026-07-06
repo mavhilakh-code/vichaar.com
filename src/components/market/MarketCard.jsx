@@ -5,9 +5,21 @@ export default function MarketCard({ market }) {
   const navigate = useNavigate();
   const totalVol = (market.house_yes_points || 0) + (market.house_no_points || 0);
 
+  const handleClick = (e) => {
+    if (e) e.stopPropagation();
+    if (market.category === 'Weather') {
+      const match = market.question.match(/^(.*?) (above|rain over)/i);
+      if (match) {
+        navigate(`/weather/${match[1]}`);
+        return;
+      }
+    }
+    navigate(`/market/${market.id}`);
+  };
+
   return (
     <div 
-      onClick={() => navigate(`/market/${market.id}`)}
+      onClick={handleClick}
       className="bg-[#111317] border border-[#2a2e33] hover:border-[#3a3f45] transition-colors rounded-2xl p-5 flex flex-col group cursor-pointer"
     >
       {/* Header with image */}
@@ -36,13 +48,13 @@ export default function MarketCard({ market }) {
       {/* Buttons */}
       <div className="flex gap-3">
          <button 
-           onClick={(e) => { e.stopPropagation(); navigate(`/market/${market.id}`); }}
+           onClick={handleClick}
            className="flex-1 bg-[#00c853]/10 hover:bg-[#00c853]/20 text-[#00c853] border border-[#00c853]/30 py-2 rounded-lg font-bold text-sm transition-colors flex justify-between px-3 items-center"
          >
            <span>Yes</span> <span className="font-mono">{market.yes}¢</span>
          </button>
          <button 
-           onClick={(e) => { e.stopPropagation(); navigate(`/market/${market.id}`); }}
+           onClick={handleClick}
            className="flex-1 bg-[#ff3b30]/10 hover:bg-[#ff3b30]/20 text-[#ff3b30] border border-[#ff3b30]/30 py-2 rounded-lg font-bold text-sm transition-colors flex justify-between px-3 items-center"
          >
            <span>No</span> <span className="font-mono">{market.no}¢</span>
