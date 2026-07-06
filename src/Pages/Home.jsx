@@ -20,7 +20,8 @@ function Home() {
       const now = new Date();
       const formattedMarkets = data
         .filter(m => m.status === 'Active' && new Date(m.end_date) > now)
-        .map(formatMarket);
+        .map(formatMarket)
+        .filter(m => m.category === 'Weather'); // Only keep Weather markets
       setMarkets(formattedMarkets);
     }
   
@@ -120,25 +121,6 @@ function Home() {
   return (
     <div className="bg-[#0f1115] text-white min-h-screen pb-10">
       
-      {/* Search Header */}
-      {(query || category) && (
-        <div className="bg-slate-900 border-b border-slate-800 py-4 px-6">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white">
-              {query ? `Search results for "${query}"` : `${category} Markets`}
-            </h2>
-            <button 
-              onClick={() => navigate('/')}
-              className="text-sm text-slate-400 hover:text-white transition-colors"
-            >
-              Clear filters
-            </button>
-          </div>
-        </div>
-      )}
-
-
-
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-6 flex flex-col gap-8">
         

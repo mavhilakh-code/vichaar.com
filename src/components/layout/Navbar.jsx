@@ -122,11 +122,7 @@ export default function Navbar() {
       {/* Bottom Tier: Categories */}
       <div className="flex items-center gap-6 px-6 py-3 border-t border-[#2a2e33]/50 overflow-x-auto whitespace-nowrap text-slate-400 text-xs font-bold uppercase tracking-wider custom-scrollbar">
         <span onClick={() => handleCategory('Trending')} className="hover:text-white cursor-pointer transition-colors">Trending</span>
-        <span onClick={() => handleCategory('Elections')} className="hover:text-slate-200 cursor-pointer">Elections</span>
-        <span onClick={() => handleCategory('Politics')} className="hover:text-slate-200 cursor-pointer">Politics</span>
-        <span onClick={() => handleCategory('Science')} className="hover:text-slate-200 cursor-pointer">Science</span>
         <span onClick={() => handleCategory('Weather')} className="hover:text-slate-200 cursor-pointer">Weather</span>
-        <span onClick={() => handleCategory('Economics')} className="hover:text-slate-200 cursor-pointer">Economics</span>
       </div>
     </nav>
   );
