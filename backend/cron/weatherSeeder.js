@@ -29,29 +29,55 @@ const CITIES = [
   { name: 'Singapore', lat: 1.35, lon: 103.82, tz: 'Asia/Singapore' },
   { name: 'Los Angeles', lat: 34.05, lon: -118.24, tz: 'America/Los_Angeles' },
 ];
+import { GoogleGenAI } from '@google/genai';
+async function getGeminiForecast(city) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  
+  const prompt = `You are a weather API. Provide the forecasted maximum temperature (in Celsius) and total precipitation (in mm) for ${city.name}, India for the next 4 days starting from today. 
+Return ONLY a valid JSON array of exactly 4 objects. No markdown formatting, no backticks.
+Format:
+[
+  {"date": "YYYY-MM-DD", "max_temp": 32.5, "precip": 1.2},
+  {"date": "YYYY-MM-DD", "max_temp": 33.1, "precip": 0.0}
+]`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: prompt,
+    config: { temperature: 0.1 }
+  });
+  
+  const text = response.text;
+  let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  const startIdx = cleanText.indexOf('[');
+  const endIdx = cleanText.lastIndexOf(']');
+  if (startIdx !== -1 && endIdx !== -1) {
+    cleanText = cleanText.substring(startIdx, endIdx + 1);
+  }
+  return JSON.parse(cleanText);
+}
 
 async function seedWeatherMarkets() {
-  console.log("🌤️ [Cron] Starting Open-Meteo Weather Market Seeder...");
+  console.log("🌤️ [Cron] Starting Gemini Weather Market Seeder...");
 
   let createdCount = 0;
 
   for (const city of CITIES) {
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&daily=temperature_2m_max,precipitation_sum&timezone=${encodeURIComponent(city.tz)}`;
-      const response = await axios.get(url);
+      const forecastData = await getGeminiForecast(city);
+      if (!forecastData || forecastData.length < 4) continue;
 
-      const daily = response.data?.daily;
-      if (!daily || !daily.time || daily.time.length < 4) continue;
-
-      // Create markets for today (0), tomorrow (1), and 3 days from now (3)
-      const targetIndices = [0, 1, 3];
+      // Create markets for today (0), tomorrow (1), day after (2), and 3 days from now (3)
+      const targetIndices = [0, 1, 2, 3];
       
       for (const targetIndex of targetIndices) {
-        const targetDateRaw = daily.time[targetIndex];
+        const dayData = forecastData[targetIndex];
+        const targetDateRaw = dayData.date;
         const targetDate = new Date(targetDateRaw).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         
-        const maxTemp = daily.temperature_2m_max[targetIndex];
-        const precip = daily.precipitation_sum[targetIndex];
+        const maxTemp = dayData.max_temp;
+        const precip = dayData.precip;
         
         // Thresholds: Temperature (+/- 2 degrees from forecast)
         const thresholdTemp = Math.floor(maxTemp);
@@ -68,7 +94,7 @@ async function seedWeatherMarkets() {
         if (!existingTemp) {
           const { error } = await supabase.from('markets').insert([{
             question: tempQuestion,
-            description: `This market predicts whether the maximum recorded temperature in ${city.name} will exceed ${thresholdTemp}°C on ${targetDate}, based on Open-Meteo API forecasts.`,
+            description: `This market predicts whether the maximum recorded temperature in ${city.name} will exceed ${thresholdTemp}°C on ${targetDate}, based on Gemini AI forecasts.`,
             category: 'Politics', // Route via Politics for DB check constraint
             image_url: getImageForQuestion(tempQuestion),
             house_yes_points: BASE_LIQUIDITY / 2,
@@ -99,7 +125,7 @@ async function seedWeatherMarkets() {
           if (!existingRain) {
             const { error } = await supabase.from('markets').insert([{
               question: rainQuestion,
-              description: `This market resolves to Yes if ${city.name} receives more than ${thresholdRain}mm of precipitation on ${targetDate}, according to Open-Meteo API data.`,
+              description: `This market resolves to Yes if ${city.name} receives more than ${thresholdRain}mm of precipitation on ${targetDate}, according to Gemini AI forecasting.`,
               category: 'Politics', 
               image_url: getImageForQuestion(rainQuestion),
               house_yes_points: BASE_LIQUIDITY / 2,
@@ -119,7 +145,7 @@ async function seedWeatherMarkets() {
       }
 
     } catch (error) {
-      console.error(`❌ Error fetching Open-Meteo data for ${city.name}:`, error.message);
+      console.error(`❌ Error fetching Gemini data for ${city.name}:`, error.message);
     }
   }
 
