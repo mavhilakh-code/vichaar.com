@@ -47,7 +47,6 @@ function App() {
             <Route path="/live" element={<LiveActivity />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/about" element={<About />} />
-            <Route path="/activity" element={<Activity />} />
             <Route path="/weather/:city" element={<CityWeather />} />
           </Routes>
         </main>
