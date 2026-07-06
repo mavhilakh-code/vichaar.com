@@ -21,6 +21,7 @@ import Notifications from "./Pages/Notifications";
 import MultiEvent from "./Pages/MultiEvent";
 import BottomNav from "./components/layout/BottomNav";
 import Footer from "./components/layout/Footer";
+import About from "./Pages/About";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path="/rewards" element={<Rewards />} />
             <Route path="/live" element={<LiveActivity />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </main>
         <Footer />

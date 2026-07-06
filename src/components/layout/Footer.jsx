@@ -31,7 +31,7 @@ export default function Footer() {
   ];
 
   const vichaarLinks = [
-    'Rewards', 'APIs', 'Leaderboard', 'Accuracy', 'Brand', 'Activity', 'Careers', 'Press'
+    'Rewards', 'APIs', 'Leaderboard', 'Accuracy', 'About', 'Activity', 'Careers', 'Press'
   ];
 
   return (
