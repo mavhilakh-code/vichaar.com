@@ -71,7 +71,7 @@ export default function TradeModal({ isOpen, onClose, market, tradeType, onVoteS
         <div className="mb-4">
           <p className="text-sm text-slate-400">Market</p>
           <p className="text-lg font-semibold text-white mt-1">{market.question}</p>
-          <p className="text-sm text-green-400 mt-2">Current Price: {price}¢</p>
+          <p className="text-sm text-green-400 mt-2">Current Price: {price}%</p>
         </div>
 
 

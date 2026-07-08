@@ -348,13 +348,13 @@ export default function Market() {
               onClick={() => setTradeType('YES')}
               className={`flex-1 py-2 rounded-md font-bold transition-all ${tradeType === 'YES' ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' : 'text-slate-400 hover:text-white'}`}
             >
-              YES {market.yes}¢
+              YES {market.yes}%
             </button>
             <button 
               onClick={() => setTradeType('NO')}
               className={`flex-1 py-2 rounded-md font-bold transition-all ${tradeType === 'NO' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'text-slate-400 hover:text-white'}`}
             >
-              NO {market.no}¢
+              NO {market.no}%
             </button>
           </div>
 
@@ -400,7 +400,7 @@ export default function Market() {
           }}
           className="flex-1 py-3 rounded-xl font-bold bg-green-500 hover:bg-green-600 text-black shadow-lg shadow-green-500/20 transition-colors flex items-center justify-center gap-2"
         >
-          Yes {market.yes}¢
+          Yes {market.yes}%
         </button>
         <button 
           onClick={() => {
@@ -409,7 +409,7 @@ export default function Market() {
           }}
           className="flex-1 py-3 rounded-xl font-bold bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-colors flex items-center justify-center gap-2"
         >
-          No {market.no}¢
+          No {market.no}%
         </button>
       </div>
     </>

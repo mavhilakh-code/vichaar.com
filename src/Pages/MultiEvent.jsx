@@ -279,7 +279,7 @@ export default function MultiEvent() {
                     className="w-24 py-2 bg-[#00c853]/10 hover:bg-[#00c853]/20 border border-[#00c853]/30 text-[#00c853] font-bold rounded flex flex-col items-center justify-center transition-colors"
                   >
                     <span className="text-xs">Buy Yes</span>
-                    <span className="font-mono">{market.yesPrice}¢</span>
+                    <span className="font-mono">{market.yesPrice}%</span>
                   </button>
 
                   {/* Buy No Button */}
@@ -288,7 +288,7 @@ export default function MultiEvent() {
                     className="w-24 py-2 bg-[#ff3b30]/10 hover:bg-[#ff3b30]/20 border border-[#ff3b30]/30 text-[#ff3b30] font-bold rounded flex flex-col items-center justify-center transition-colors"
                   >
                     <span className="text-xs">Buy No</span>
-                    <span className="font-mono">{market.noPrice}¢</span>
+                    <span className="font-mono">{market.noPrice}%</span>
                   </button>
                 </div>
               </div>
@@ -356,13 +356,13 @@ export default function MultiEvent() {
                 onClick={() => setTradeType('YES')}
                 className={`flex-1 py-2 rounded-md font-bold transition-all ${tradeType === 'YES' ? 'bg-[#00c853] text-black shadow-lg shadow-[#00c853]/20' : 'text-slate-400 hover:text-white'}`}
               >
-                YES {selectedMarket.yesPrice}¢
+                YES {selectedMarket.yesPrice}%
               </button>
               <button 
                 onClick={() => setTradeType('NO')}
                 className={`flex-1 py-2 rounded-md font-bold transition-all ${tradeType === 'NO' ? 'bg-[#ff3b30] text-white shadow-lg shadow-[#ff3b30]/20' : 'text-slate-400 hover:text-white'}`}
               >
-                NO {selectedMarket.noPrice}¢
+                NO {selectedMarket.noPrice}%
               </button>
             </div>
 

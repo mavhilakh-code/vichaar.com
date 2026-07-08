@@ -318,14 +318,14 @@ export default function CityWeather() {
                             className="flex flex-col items-center justify-center bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 font-bold px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg min-w-[70px] sm:min-w-[80px] transition-colors"
                           >
                             <span className="text-[10px] sm:text-xs">Buy Yes</span>
-                            <span className="text-sm sm:text-base">{market.yesPrice}¢</span>
+                            <span className="text-sm sm:text-base">{market.yesPrice}%</span>
                           </button>
                           <button 
                             onClick={() => { setSelectedMarket(market); setTradeType('NO'); }}
                             className="flex flex-col items-center justify-center bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg min-w-[70px] sm:min-w-[80px] transition-colors"
                           >
                             <span className="text-[10px] sm:text-xs">Buy No</span>
-                            <span className="text-sm sm:text-base">{market.noPrice}¢</span>
+                            <span className="text-sm sm:text-base">{market.noPrice}%</span>
                           </button>
                         </>
                       )}
@@ -399,13 +399,13 @@ export default function CityWeather() {
                 onClick={() => setTradeType('YES')}
                 className={`flex-1 py-2 rounded-md font-bold transition-all ${tradeType === 'YES' ? 'bg-[#00c853] text-black shadow-lg shadow-[#00c853]/20' : 'text-slate-400 hover:text-white'}`}
               >
-                YES {selectedMarket.yesPrice}¢
+                YES {selectedMarket.yesPrice}%
               </button>
               <button 
                 onClick={() => setTradeType('NO')}
                 className={`flex-1 py-2 rounded-md font-bold transition-all ${tradeType === 'NO' ? 'bg-[#ff3b30] text-white shadow-lg shadow-[#ff3b30]/20' : 'text-slate-400 hover:text-white'}`}
               >
-                NO {selectedMarket.noPrice}¢
+                NO {selectedMarket.noPrice}%
               </button>
             </div>
 

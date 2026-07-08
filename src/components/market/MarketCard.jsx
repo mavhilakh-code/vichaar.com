@@ -51,13 +51,13 @@ export default function MarketCard({ market }) {
            onClick={handleClick}
            className="flex-1 bg-[#00c853]/10 hover:bg-[#00c853]/20 text-[#00c853] border border-[#00c853]/30 py-2 rounded-lg font-bold text-sm transition-colors flex justify-between px-3 items-center"
          >
-           <span>Yes</span> <span className="font-mono">{market.yes}¢</span>
+           <span>Yes</span> <span className="font-mono">{market.yes}%</span>
          </button>
          <button 
            onClick={handleClick}
            className="flex-1 bg-[#ff3b30]/10 hover:bg-[#ff3b30]/20 text-[#ff3b30] border border-[#ff3b30]/30 py-2 rounded-lg font-bold text-sm transition-colors flex justify-between px-3 items-center"
          >
-           <span>No</span> <span className="font-mono">{market.no}¢</span>
+           <span>No</span> <span className="font-mono">{market.no}%</span>
          </button>
       </div>
     </div>
