@@ -56,13 +56,16 @@ export default function Portfolio() {
       }
     } catch (e) {
       console.error(e);
+
       alert("Error claiming bonus");
     } finally {
       setClaiming(false);
     }
   };
 
-  const activePoints = data.positions.reduce((acc, pos) => acc + pos.amount, 0);
+  const activePositions = data.positions.filter(p => p.status === 'Active');
+  const pastPositions = data.positions.filter(p => p.status !== 'Active');
+  const activePoints = activePositions.reduce((acc, pos) => acc + pos.amount, 0);
   const totalValue = data.liquid_points + activePoints;
 
   if (loading) return <div className="p-10 text-center text-slate-400">Loading Portfolio...</div>;
@@ -89,26 +92,59 @@ export default function Portfolio() {
 
       {/* Positions List */}
       <h2 className="text-2xl font-bold text-white mb-6">Active Positions</h2>
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-        {data.positions.length > 0 ? (
-          data.positions.map((pos) => (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
+        {activePositions.length > 0 ? (
+          activePositions.map((pos) => (
             <div key={pos.id} className="p-6 border-b border-slate-800 last:border-0 flex justify-between items-center hover:bg-slate-800/30 transition-colors">
               <div>
                 <h3 className="font-semibold text-lg text-white">{pos.question}</h3>
                 <span className={`inline-block px-2 py-1 rounded text-xs font-bold mt-2 ${
-                  pos.type === 'YES' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                  pos.type === 'YES' || pos.type === 'Yes' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                 }`}>
                   {pos.type}
                 </span>
               </div>
               <div className="text-right">
                 <p className="font-bold text-white font-mono">₹{pos.amount}</p>
-                <p className="text-xs text-slate-400">{pos.status}</p>
+                <p className="text-xs text-blue-400">Active</p>
               </div>
             </div>
           ))
         ) : (
           <p className="p-10 text-center text-slate-500">No active positions yet.</p>
+        )}
+      </div>
+
+      <h2 className="text-2xl font-bold text-white mb-6">Past Positions</h2>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        {pastPositions.length > 0 ? (
+          pastPositions.map((pos) => {
+            const isWinner = pos.type === pos.winning_outcome;
+            const isCancelled = pos.winning_outcome === null;
+            return (
+              <div key={pos.id} className="p-6 border-b border-slate-800 last:border-0 flex justify-between items-center hover:bg-slate-800/30 transition-colors opacity-75">
+                <div>
+                  <h3 className="font-semibold text-lg text-white">{pos.question}</h3>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+                      pos.type === 'YES' || pos.type === 'Yes' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {pos.type}
+                    </span>
+                    <span className={`text-xs font-bold ${isCancelled ? 'text-slate-400' : isWinner ? 'text-green-400' : 'text-red-400'}`}>
+                      {isCancelled ? 'Refunded' : isWinner ? 'Won' : 'Lost'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-400 font-mono line-through">₹{pos.amount}</p>
+                  <p className="text-xs text-slate-500">Resolved</p>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="p-10 text-center text-slate-500">No past positions yet.</p>
         )}
       </div>
     </div>

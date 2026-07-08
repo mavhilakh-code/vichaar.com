@@ -17,6 +17,11 @@ export default function CityWeather() {
   const [amount, setAmount] = useState('');
   const [tradeLoading, setTradeLoading] = useState(false);
 
+  // Comments state
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [stableMarketId, setStableMarketId] = useState(null);
+
   useEffect(() => {
     async function loadWeatherMarkets() {
       // Fetch all weather markets for this city
@@ -68,12 +73,57 @@ export default function CityWeather() {
         if (uniqueDates.length > 0) {
           setActiveDate(uniqueDates[0]);
         }
+
+        // Define a stable market ID for comments (smallest UUID for this city)
+        const stableId = [...parsedMarkets].sort((a, b) => a.id.localeCompare(b.id))[0].id;
+        setStableMarketId(stableId);
+
+        // Load comments
+        try {
+          const res = await fetch(`${API_URL}/api/comments/${stableId}`);
+          const data = await res.json();
+          if (data.success) {
+            setComments(data.comments);
+          }
+        } catch (err) {
+          console.error(err);
+        }
       }
       setLoading(false);
     }
     
     if (city) loadWeatherMarkets();
   }, [city]);
+
+  useEffect(() => {
+    if (!stableMarketId) return;
+
+    // Subscribe to comments
+    const commentSub = supabase
+      .channel(`comments_city_${stableMarketId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `market_id=eq.${stableMarketId}` }, async (payload) => {
+        const { data: c } = await supabase
+          .from('comments')
+          .select(`comment_id, content, created_at, users(user_id, username, display_name)`)
+          .eq('comment_id', payload.new.comment_id)
+          .single();
+          
+        if (c) {
+          const formatted = {
+            id: c.comment_id,
+            content: c.content,
+            created_at: c.created_at,
+            user_id: c.users.user_id,
+            username: c.users.username,
+            display_name: c.users.display_name
+          };
+          setComments((prev) => [formatted, ...prev]);
+        }
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(commentSub);
+  }, [stableMarketId]);
 
   const handleOrder = async () => {
     if (!amount || amount <= 0 || !selectedMarket) return;
@@ -118,6 +168,32 @@ export default function CityWeather() {
     }
   };
 
+  const submitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !stableMarketId) return;
+
+    try {
+      const userStr = localStorage.getItem("vichaarUser");
+      if (!userStr) throw new Error("Please login to comment.");
+      const user = JSON.parse(userStr);
+
+      const res = await fetch(`${API_URL}/api/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          market_id: stableMarketId,
+          content: newComment
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      setNewComment('');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   if (loading) return <div className="p-10 text-center text-slate-400">Loading Weather...</div>;
   if (markets.length === 0) return <div className="p-10 text-center text-red-500">No active weather markets found for {city}</div>;
 
@@ -142,18 +218,18 @@ export default function CityWeather() {
       <div className="lg:col-span-2 flex flex-col gap-6">
         
         {/* Header */}
-        <div className="flex justify-between items-start">
-          <div className="flex gap-4 items-center">
-            <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex gap-3 sm:gap-4 items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
               <Cloud size={24} className="text-blue-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Weather in {city}</h1>
-              <p className="text-slate-400 mt-1">Predict temperatures and precipitation</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Weather in {city}</h1>
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Predict temperatures and precipitation</p>
             </div>
           </div>
-          <div className="bg-[#111317] border border-[#2a2e33] px-4 py-2 rounded-lg text-slate-300 text-sm font-bold flex items-center gap-2">
-            <TrendingUp size={16} className="text-green-400" />
+          <div className="bg-[#111317] border border-[#2a2e33] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-slate-300 text-xs sm:text-sm font-bold flex items-center gap-2">
+            <TrendingUp size={14} className="text-green-400" />
             <span>${(totalCityVolume).toLocaleString()} Total Vol.</span>
           </div>
         </div>
@@ -186,7 +262,7 @@ export default function CityWeather() {
               <span>Thresholds for {activeDate}</span>
             </div>
             {activeMarketsForDate.some(m => m.status !== 'Resolved' && new Date(m.end_date) >= new Date()) ? (
-              <div className="flex gap-16 pr-4">
+              <div className="hidden sm:flex gap-16 pr-4">
                  <span>Buy Yes</span>
                  <span>Buy No</span>
               </div>
@@ -206,25 +282,25 @@ export default function CityWeather() {
               return (
                 <div 
                   key={market.id} 
-                  className={`flex justify-between items-center p-4 border-b border-[#2a2e33]/50 transition-colors ${selectedMarket?.id === market.id ? 'bg-[#1a1d24]' : 'hover:bg-[#16181d]'}`}
+                  className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border-b border-[#2a2e33]/50 transition-colors ${selectedMarket?.id === market.id ? 'bg-[#1a1d24]' : 'hover:bg-[#16181d]'}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <img src={market.image_url || `https://ui-avatars.com/api/?name=${city}&background=random`} alt={city} className="w-8 h-8 rounded-full border border-[#2a2e33]" />
-                    <div>
-                      <div className="font-bold text-white text-lg">{displayName}</div>
-                      <div className="text-xs text-gray-500 font-mono">${(market.totalVolume).toLocaleString()} Vol.</div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <img src={market.image_url || `https://ui-avatars.com/api/?name=${city}&background=random`} alt={city} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full shrink-0 border border-[#2a2e33]" />
+                    <div className="flex-1">
+                      <div className="font-bold text-white text-base sm:text-lg leading-tight">{displayName}</div>
+                      <div className="text-xs text-gray-500 font-mono mt-0.5">${(market.totalVolume).toLocaleString()} Vol.</div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto mt-4 sm:mt-0">
                     {/* Probability */}
-                    <div className="text-xl font-bold text-white w-16 text-right">
+                    <div className="text-lg sm:text-xl font-bold text-white min-w-[3rem] text-left sm:text-right">
                       {market.yesPrice}%
                     </div>
                     {/* Trading Interface or Resolution Status */}
-                    <div className="flex gap-4">
+                    <div className="flex gap-2 sm:gap-4 flex-1 justify-end">
                       {market.status === 'Resolved' ? (
-                        <div className={`flex items-center justify-center font-bold px-6 py-2 rounded-lg ${
+                        <div className={`flex items-center justify-center font-bold px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base ${
                           market.winning_outcome === 'YES' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
                           market.winning_outcome === 'NO' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
                           'bg-slate-700/50 text-slate-400 border border-slate-600'
@@ -232,24 +308,24 @@ export default function CityWeather() {
                           {market.winning_outcome ? `Resolved: ${market.winning_outcome}` : 'Cancelled'}
                         </div>
                       ) : new Date(market.end_date) < new Date() ? (
-                        <div className="flex items-center justify-center font-bold px-6 py-2 rounded-lg bg-slate-800/50 text-slate-400 border border-slate-700">
+                        <div className="flex items-center justify-center font-bold px-4 sm:px-6 py-2 rounded-lg bg-slate-800/50 text-slate-400 border border-slate-700 text-sm sm:text-base">
                           Pending Resolution
                         </div>
                       ) : (
                         <>
                           <button 
                             onClick={() => { setSelectedMarket(market); setTradeType('YES'); }}
-                            className="flex flex-col items-center justify-center bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 font-bold px-4 py-2 rounded-lg min-w-[80px] transition-colors"
+                            className="flex flex-col items-center justify-center bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 font-bold px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg min-w-[70px] sm:min-w-[80px] transition-colors"
                           >
-                            <span className="text-xs">Buy Yes</span>
-                            <span>{market.yesPrice}¢</span>
+                            <span className="text-[10px] sm:text-xs">Buy Yes</span>
+                            <span className="text-sm sm:text-base">{market.yesPrice}¢</span>
                           </button>
                           <button 
                             onClick={() => { setSelectedMarket(market); setTradeType('NO'); }}
-                            className="flex flex-col items-center justify-center bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold px-4 py-2 rounded-lg min-w-[80px] transition-colors"
+                            className="flex flex-col items-center justify-center bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg min-w-[70px] sm:min-w-[80px] transition-colors"
                           >
-                            <span className="text-xs">Buy No</span>
-                            <span>{market.noPrice}¢</span>
+                            <span className="text-[10px] sm:text-xs">Buy No</span>
+                            <span className="text-sm sm:text-base">{market.noPrice}¢</span>
                           </button>
                         </>
                       )}
@@ -258,6 +334,45 @@ export default function CityWeather() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Comment Section */}
+        <div className="bg-[#111317] border border-[#2a2e33] rounded-2xl p-6 mt-4">
+          <h2 className="text-xl font-bold text-white mb-4">City Weather Discussion</h2>
+          
+          <form onSubmit={submitComment} className="flex gap-4 mb-8">
+            <input 
+              type="text" 
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder={`What are your thoughts on ${city}'s weather?`} 
+              className="flex-grow bg-[#16181d] border border-[#2a2e33] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00c853] transition-colors"
+            />
+            <button type="submit" className="bg-[#2a2e33] hover:bg-[#3a3f45] text-white font-bold px-6 rounded-lg transition-colors border border-[#3a3f45]">
+              Post
+            </button>
+          </form>
+
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {comments.length === 0 ? (
+              <p className="text-slate-500 text-center py-4">No comments yet. Start the debate!</p>
+            ) : comments.map(c => (
+              <div key={c.id} className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-[#1a1d24] flex items-center justify-center text-[#00c853] font-bold border border-[#2a2e33] uppercase shrink-0">
+                  {c.display_name.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-bold text-white">{c.display_name}</span>
+                    <span className="text-xs text-slate-500">
+                      {new Date(c.created_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+                    </span>
+                  </div>
+                  <p className="text-slate-300 mt-1">{c.content}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
