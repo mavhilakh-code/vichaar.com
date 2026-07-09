@@ -17,15 +17,15 @@ const INDICATORS = [
   { 
     code: 'LUR', 
     name: 'Unemployment Rate', 
-    formatQuestion: (countryName, threshold) => `${countryName} Unemployment below ${threshold}% in 2026?`,
-    formatDescription: (countryName, threshold) => `This market resolves to Yes if the IMF projects the Unemployment Rate for ${countryName} to fall below ${threshold}% in 2026.`,
+    formatQuestion: (countryName, threshold, year) => `[IMF] ${countryName} Unemployment below ${threshold}% in ${year}?`,
+    formatDescription: (countryName, threshold, year) => `This market resolves to Yes if the IMF projects the Unemployment Rate for ${countryName} to fall below ${threshold}% in ${year}.`,
     getThreshold: (historicalVal) => (historicalVal > 2 ? historicalVal - 0.2 : 2.0).toFixed(1)
   },
   { 
     code: 'BCA_NGDPD', 
     name: 'Current Account Balance', 
-    formatQuestion: (countryName, threshold) => `${countryName} Current Account above ${threshold}% of GDP in 2026?`,
-    formatDescription: (countryName, threshold) => `This market resolves to Yes if the IMF projects the Current Account Balance for ${countryName} to exceed ${threshold}% of GDP in 2026.`,
+    formatQuestion: (countryName, threshold, year) => `[IMF] ${countryName} Current Account above ${threshold}% of GDP in ${year}?`,
+    formatDescription: (countryName, threshold, year) => `This market resolves to Yes if the IMF projects the Current Account Balance for ${countryName} to exceed ${threshold}% of GDP in ${year}.`,
     getThreshold: (historicalVal) => (historicalVal + 0.5).toFixed(1)
   }
 ];
@@ -49,8 +49,9 @@ async function seedIMFMarkets() {
           const historicalValue = dataMap[country.code]['2025'];
           
           const threshold = indicator.getThreshold(historicalValue);
-          const question = indicator.formatQuestion(country.name, threshold);
-        const description = indicator.formatDescription(country.name, threshold);
+          const targetYear = new Date().getFullYear();
+          const question = indicator.formatQuestion(country.name, threshold, targetYear);
+          const description = indicator.formatDescription(country.name, threshold, targetYear);
 
           // Check if market already exists
           const { data: existing } = await supabase

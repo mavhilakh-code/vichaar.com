@@ -19,53 +19,32 @@ const CITIES = [
   { name: 'Guwahati', lat: 26.14, lon: 91.73, tz: 'Asia/Kolkata' },
   { name: 'Tezpur', lat: 26.65, lon: 92.79, tz: 'Asia/Kolkata' },
   { name: 'Biswanath', lat: 26.73, lon: 93.15, tz: 'Asia/Kolkata' },
-  // 🌍 Popular Global Cities
-  { name: 'New York', lat: 40.71, lon: -74.00, tz: 'America/New_York' },
-  { name: 'London', lat: 51.50, lon: -0.12, tz: 'Europe/London' },
-  { name: 'Tokyo', lat: 35.68, lon: 139.65, tz: 'Asia/Tokyo' },
-  { name: 'Sydney', lat: -33.86, lon: 151.20, tz: 'Australia/Sydney' },
-  { name: 'Dubai', lat: 25.20, lon: 55.27, tz: 'Asia/Dubai' },
-  { name: 'Paris', lat: 48.85, lon: 2.35, tz: 'Europe/Paris' },
-  { name: 'Singapore', lat: 1.35, lon: 103.82, tz: 'Asia/Singapore' },
-  { name: 'Los Angeles', lat: 34.05, lon: -118.24, tz: 'America/Los_Angeles' },
-];
-import { GoogleGenAI } from '@google/genai';
-async function getGeminiForecast(city) {
-  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  
-  const prompt = `You are a weather API. Provide the forecasted maximum temperature (in Celsius) and total precipitation (in mm) for ${city.name}, India for the next 4 days starting from today. 
-Return ONLY a valid JSON array of exactly 4 objects. No markdown formatting, no backticks.
-Format:
-[
-  {"date": "YYYY-MM-DD", "max_temp": 32.5, "precip": 1.2},
-  {"date": "YYYY-MM-DD", "max_temp": 33.1, "precip": 0.0}
-]`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: { temperature: 0.1 }
-  });
-  
-  const text = response.text;
-  let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  const startIdx = cleanText.indexOf('[');
-  const endIdx = cleanText.lastIndexOf(']');
-  if (startIdx !== -1 && endIdx !== -1) {
-    cleanText = cleanText.substring(startIdx, endIdx + 1);
+];
+
+async function getOpenMeteoForecast(city) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&daily=temperature_2m_max,precipitation_sum&timezone=${city.tz}`;
+  const resp = await axios.get(url);
+  const daily = resp.data.daily;
+  const result = [];
+  for (let i = 0; i < 4 && i < (daily.time?.length || 0); i++) {
+    result.push({
+      date: daily.time[i],
+      max_temp: daily.temperature_2m_max[i],
+      precip: daily.precipitation_sum[i]
+    });
   }
-  return JSON.parse(cleanText);
+  return result;
 }
 
 async function seedWeatherMarkets() {
-  console.log("🌤️ [Cron] Starting Gemini Weather Market Seeder...");
+  console.log("🌤️ [Cron] Starting Open-Meteo Weather Market Seeder...");
 
   let createdCount = 0;
 
   for (const city of CITIES) {
     try {
-      const forecastData = await getGeminiForecast(city);
+      const forecastData = await getOpenMeteoForecast(city);
       if (!forecastData || forecastData.length < 4) continue;
 
       // Create markets for today (0), tomorrow (1), day after (2), and 3 days from now (3)
@@ -94,7 +73,7 @@ async function seedWeatherMarkets() {
         if (!existingTemp) {
           const { error } = await supabase.from('markets').insert([{
             question: tempQuestion,
-            description: `This market predicts whether the maximum recorded temperature in ${city.name} will exceed ${thresholdTemp}°C on ${targetDate}, based on Gemini AI forecasts.`,
+            description: `This market predicts whether the maximum recorded temperature in ${city.name} will exceed ${thresholdTemp}°C on ${targetDate}, based on Open-Meteo forecast data.`,
             category: 'Politics', // Route via Politics for DB check constraint
             image_url: getImageForQuestion(tempQuestion),
             house_yes_points: BASE_LIQUIDITY / 2,
@@ -111,37 +90,7 @@ async function seedWeatherMarkets() {
           }
         }
 
-        // Market 2: Precipitation (only if forecast predicts some rain to make it interesting, or just general)
-        if (precip > 0.5) {
-          const thresholdRain = Math.floor(precip);
-          const rainQuestion = `${city.name} rain over ${thresholdRain}mm on ${targetDate}?`;
-
-          const { data: existingRain } = await supabase
-            .from('markets')
-            .select('market_id')
-            .eq('question', rainQuestion)
-            .single();
-            
-          if (!existingRain) {
-            const { error } = await supabase.from('markets').insert([{
-              question: rainQuestion,
-              description: `This market resolves to Yes if ${city.name} receives more than ${thresholdRain}mm of precipitation on ${targetDate}, according to Gemini AI forecasting.`,
-              category: 'Politics', 
-              image_url: getImageForQuestion(rainQuestion),
-              house_yes_points: BASE_LIQUIDITY / 2,
-              house_no_points: BASE_LIQUIDITY / 2,
-              status: 'Active',
-              end_date: new Date(`${targetDateRaw}T23:59:59Z`).toISOString()
-            }]);
-
-            if (error) {
-              console.error(`❌ Failed to insert weather market: ${rainQuestion}`, error);
-            } else {
-              console.log(`✅ Created Weather Market: ${rainQuestion}`);
-              createdCount++;
-            }
-          }
-        }
+        // Market 2: Precipitation generation removed as per user request
       }
 
     } catch (error) {

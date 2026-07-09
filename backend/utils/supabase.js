@@ -8,6 +8,7 @@ const getSupabase = () => {
     console.log("Initializing Supabase...");
     console.log("URL exists:", !!process.env.SUPABASE_URL);
     console.log("Key exists:", !!process.env.SUPABASE_SERVICE_KEY);
+    console.log("Service Key Prefix:", (process.env.SUPABASE_SERVICE_KEY || "").substring(0, 15));
     client = createClient(
       (process.env.SUPABASE_URL || "").trim(),
       (process.env.SUPABASE_SERVICE_KEY || "").trim()

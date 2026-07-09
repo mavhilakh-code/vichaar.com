@@ -11,6 +11,11 @@ import { startCronJobs } from "./cron/marketSeeder.js";
 
 const app = new Hono();
 
+app.onError((err, c) => {
+  console.error("Global Error:", err);
+  return c.json({ success: false, message: err.message, stack: err.stack }, 500);
+});
+
 // CORS is required because frontend is on Cloudflare Pages and backend is on Cloudflare Workers
 app.use('*', cors({
   origin: '*', // You can restrict this to your frontend URL later
@@ -25,9 +30,31 @@ app.route("/api/charts", chartRoutes);
 app.route("/api/comments", commentRoutes);
 app.route("/api/wallet", walletRoutes);
 
-// Test route
 app.get("/", (c) => {
   return c.text("Vichaar Backend Running on Cloudflare!");
+});
+
+app.get("/api/admin/clean-markets", async (c) => {
+  const { supabase } = await import("./utils/supabase.js");
+  const { data: markets, error } = await supabase.from('markets').select('market_id, question');
+  if (error) return c.json({ error: error.message });
+  
+  const regex = /^(.*?) (above|rain over) (.*?) on (.*?)\?$/i;
+  const marketsToDelete = [];
+  markets.forEach(m => {
+      if (!m.question.match(regex)) {
+          marketsToDelete.push(m.market_id);
+      }
+  });
+
+  if (marketsToDelete.length === 0) return c.json({ message: "No markets to delete" });
+
+  const batchSize = 100;
+  for (let i = 0; i < marketsToDelete.length; i += batchSize) {
+      const batch = marketsToDelete.slice(i, i + batchSize);
+      await supabase.from('markets').delete().in('market_id', batch);
+  }
+  return c.json({ message: `Deleted ${marketsToDelete.length} non-weather markets` });
 });
 
 export default {

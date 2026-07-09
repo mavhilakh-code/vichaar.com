@@ -7,9 +7,10 @@ import { resolveMarket } from "../controllers/marketController.js";
 async function askGroq(prompt) {
   if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
   const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-    model: 'llama-3.1-70b-versatile',
+    model: 'llama-3.3-70b-versatile',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.2
+    temperature: 0.2,
+    max_tokens: 500
   }, {
     headers: {
       'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
@@ -22,9 +23,10 @@ async function askGroq(prompt) {
 async function askOpenRouter(prompt) {
   if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY missing");
   const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-    model: 'perplexity/llama-3.1-sonar-large-128k-online', // Excellent for searching the web
+    model: 'perplexity/sonar',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.2
+    temperature: 0.2,
+    max_tokens: 500
   }, {
     headers: {
       'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -36,13 +38,97 @@ async function askOpenRouter(prompt) {
   return response.data.choices[0].message.content;
 }
 
-async function resolveExpiredMarkets() {
-  console.log("🤖 [Cron] Starting Automated AI Market Resolver (Groq/OpenRouter)...");
+const wbCountryMap = { 'United States': 'US', 'China': 'CN', 'India': 'IN', 'Japan': 'JP', 'Germany': 'DE' };
+const imfCountryMap = { 'United States': 'USA', 'China': 'CHN', 'India': 'IND', 'Japan': 'JPN', 'Germany': 'DEU' };
 
-  if (!process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) {
-    console.error("❌ [Cron] Both GROQ_API_KEY and OPENROUTER_API_KEY are missing. Cannot resolve markets.");
-    return;
+async function resolveWorldBankMarket(market) {
+  console.log(`   🌐 Parsing World Bank Market...`);
+  // [WB] India GDP Growth above 7.0% in 2026?
+  const regex = /^\[WB\] (.*?) (GDP Growth|Inflation) (above|below) (.*?)% in (\d{4})\?$/;
+  const match = market.question.match(regex);
+  
+  if (!match) return null;
+  const [ , countryName, metricName, condition, thresholdStr, yearStr ] = match;
+  
+  const countryCode = wbCountryMap[countryName];
+  const indicatorCode = metricName === 'GDP Growth' ? 'NY.GDP.MKTP.KD.ZG' : 'FP.CPI.TOTL.ZG';
+  const threshold = parseFloat(thresholdStr);
+  const year = parseInt(yearStr);
+
+  if (!countryCode) return null;
+
+  try {
+    const url = `https://api.worldbank.org/v2/country/${countryCode}/indicator/${indicatorCode}?format=json&date=${year}`;
+    const response = await axios.get(url);
+    if (response.data && response.data[1] && response.data[1][0] && response.data[1][0].value !== null) {
+      const actualValue = response.data[1][0].value;
+      console.log(`   📊 WB API Data for ${year}: ${actualValue} (Target: ${condition} ${threshold})`);
+      
+      let isYes = false;
+      if (condition === 'above' && actualValue > threshold) isYes = true;
+      if (condition === 'below' && actualValue < threshold) isYes = true;
+
+      return {
+        outcome: isYes ? 'YES' : 'NO',
+        reason: `The World Bank reported ${metricName} for ${countryName} in ${year} as ${actualValue.toFixed(2)}%, which is ${isYes ? '' : 'not '}${condition} the threshold of ${threshold}%.`
+      };
+    } else {
+       console.log(`   ⏳ Data not yet available from World Bank for ${year}. Need to extend expiration.`);
+       return { outcome: 'EXTEND' };
+    }
+  } catch (err) {
+    console.error("   ❌ Error fetching from World Bank:", err.message);
+    return null;
   }
+}
+
+async function resolveIMFMarket(market) {
+  console.log(`   🌐 Parsing IMF Market...`);
+  // [IMF] India Unemployment below 5.0% in 2026?
+  // [IMF] India Current Account above -1.0% of GDP in 2026?
+  const regex = /^\[IMF\] (.*?) (Unemployment|Current Account) (above|below) (.*?)%(?: of GDP)? in (\d{4})\?$/;
+  const match = market.question.match(regex);
+
+  if (!match) return null;
+  const [ , countryName, metricName, condition, thresholdStr, yearStr ] = match;
+  
+  const countryCode = imfCountryMap[countryName];
+  const indicatorCode = metricName === 'Unemployment' ? 'LUR' : 'BCA_NGDPD';
+  const threshold = parseFloat(thresholdStr);
+  const year = parseInt(yearStr);
+
+  if (!countryCode) return null;
+
+  try {
+    const url = `https://www.imf.org/external/datamapper/api/v1/${indicatorCode}?periods=${year}`;
+    const response = await axios.get(url);
+    
+    const dataMap = response.data.values[indicatorCode];
+    if (dataMap && dataMap[countryCode] && dataMap[countryCode][year] !== undefined) {
+      const actualValue = dataMap[countryCode][year];
+      console.log(`   📊 IMF API Data for ${year}: ${actualValue} (Target: ${condition} ${threshold})`);
+      
+      let isYes = false;
+      if (condition === 'above' && actualValue > threshold) isYes = true;
+      if (condition === 'below' && actualValue < threshold) isYes = true;
+
+      return {
+        outcome: isYes ? 'YES' : 'NO',
+        reason: `The IMF reported ${metricName} for ${countryName} in ${year} as ${actualValue.toFixed(2)}%, which is ${isYes ? '' : 'not '}${condition} the threshold of ${threshold}%.`
+      };
+    } else {
+       console.log(`   ⏳ Data not yet available from IMF for ${year}. Need to extend expiration.`);
+       return { outcome: 'EXTEND' };
+    }
+  } catch (err) {
+    console.error("   ❌ Error fetching from IMF:", err.message);
+    return null;
+  }
+}
+
+
+async function resolveExpiredMarkets() {
+  console.log("🤖 [Cron] Starting Market Resolver...");
 
   try {
     const now = new Date().toISOString();
@@ -50,9 +136,10 @@ async function resolveExpiredMarkets() {
     // 1. Fetch expired active markets
     const { data: expiredMarkets, error } = await supabase
       .from('markets')
-      .select('market_id, question, description, end_date')
+      .select('market_id, question, description, end_date, status')
       .eq('status', 'Active')
-      .lt('end_date', now);
+      .lt('end_date', now)
+      .limit(5);
 
     if (error) throw error;
 
@@ -61,13 +148,33 @@ async function resolveExpiredMarkets() {
       return;
     }
 
-    console.log(`🔍 Found ${expiredMarkets.length} expired markets. Asking AI to resolve...`);
+    console.log(`🔍 Found ${expiredMarkets.length} expired markets. Resolving...`);
     let resolvedCount = 0;
 
-    // 2. Process each market individually
     for (const market of expiredMarkets) {
       try {
-        const prompt = `
+        console.log(`\n🧠 Resolving Market ID ${market.market_id}: "${market.question}"`);
+        let result = null;
+
+        // -- DETERMINISTIC API RESOLVERS --
+        if (market.question.startsWith("[WB]")) {
+           result = await resolveWorldBankMarket(market);
+        } else if (market.question.startsWith("[IMF]")) {
+           result = await resolveIMFMarket(market);
+        }
+
+        // -- EXTEND EXPIRATION IF API DATA NOT READY --
+        if (result && result.outcome === 'EXTEND') {
+           const newEndDate = new Date();
+           newEndDate.setDate(newEndDate.getDate() + 7); // check again in 7 days
+           await supabase.from('markets').update({ end_date: newEndDate.toISOString() }).eq('market_id', market.market_id);
+           console.log(`   📅 Extended market expiration by 7 days.`);
+           continue;
+        }
+
+        // -- FALLBACK TO AI FOR OTHER MARKETS --
+        if (!result) {
+            const prompt = `
 You are an automated prediction market resolution oracle.
 You have access to facts to check real-time events.
 Please resolve the following prediction market that has just ended.
@@ -88,51 +195,66 @@ Return ONLY a JSON object in this format (no markdown, no backticks, no other te
   "reason": "Short explanation of why you chose this outcome."
 }
 `;
-
-        console.log(`\n🧠 Resolving Market ID ${market.market_id}: "${market.question}"`);
-        
-        let text = "";
-        let result = null;
-
-        try {
-           console.log(`   ⚡ Asking Groq (Llama 3.1 70B)...`);
-           text = await askGroq(prompt);
-           let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-           // Find the first { and last } in case of extra text
-           const startIdx = cleanText.indexOf('{');
-           const endIdx = cleanText.lastIndexOf('}');
-           if (startIdx !== -1 && endIdx !== -1) {
-             cleanText = cleanText.substring(startIdx, endIdx + 1);
-           }
-           result = JSON.parse(cleanText);
-           
-           if (!result.outcome || result.outcome === 'UNRESOLVED') {
-               throw new Error("Groq returned UNRESOLVED or invalid output");
-           }
-        } catch (groqErr) {
-           console.log(`   ⚠️ Groq couldn't resolve definitively (${groqErr.message}). Falling back to OpenRouter (Perplexity Sonar Online)...`);
-           try {
-               text = await askOpenRouter(prompt);
-               let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-               const startIdx = cleanText.indexOf('{');
-               const endIdx = cleanText.lastIndexOf('}');
-               if (startIdx !== -1 && endIdx !== -1) {
-                 cleanText = cleanText.substring(startIdx, endIdx + 1);
+            if (market.question.startsWith("[Breaking]")) {
+               console.log(`   ⚡ [Breaking] market detected. Asking OpenRouter (Perplexity Sonar Online)...`);
+               try {
+                   const text = await askOpenRouter(prompt);
+                   let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                   const startIdx = cleanText.indexOf('{');
+                   const endIdx = cleanText.lastIndexOf('}');
+                   if (startIdx !== -1 && endIdx !== -1) {
+                     cleanText = cleanText.substring(startIdx, endIdx + 1);
+                   }
+                   result = JSON.parse(cleanText);
+               } catch (orErr) {
+                   console.error(`   ❌ OpenRouter failed:`, orErr.message);
+                   result = { outcome: "UNRESOLVED", reason: "AI provider failed." };
                }
-               result = JSON.parse(cleanText);
-           } catch (orErr) {
-               console.error(`   ❌ OpenRouter also failed:`, orErr.message);
-               result = { outcome: "UNRESOLVED", reason: "All AI providers failed." };
-           }
+            } else {
+              try {
+                 console.log(`   ⚡ Asking Groq (Llama 3.3 70B)...`);
+                 const text = await askGroq(prompt);
+                 let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                 const startIdx = cleanText.indexOf('{');
+                 const endIdx = cleanText.lastIndexOf('}');
+                 if (startIdx !== -1 && endIdx !== -1) {
+                   cleanText = cleanText.substring(startIdx, endIdx + 1);
+                 }
+                 result = JSON.parse(cleanText);
+                 
+                 if (!result.outcome || result.outcome === 'UNRESOLVED') {
+                     throw new Error("Groq returned UNRESOLVED or invalid output");
+                 }
+              } catch (groqErr) {
+                 console.log(`   ⚠️ Groq couldn't resolve definitively. Falling back to OpenRouter (Perplexity Sonar Online)...`);
+                 try {
+                     const text = await askOpenRouter(prompt);
+                   let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                   const startIdx = cleanText.indexOf('{');
+                   const endIdx = cleanText.lastIndexOf('}');
+                   if (startIdx !== -1 && endIdx !== -1) {
+                     cleanText = cleanText.substring(startIdx, endIdx + 1);
+                   }
+                   result = JSON.parse(cleanText);
+                 } catch (orErr) {
+                     console.error(`   ❌ OpenRouter also failed.`);
+                     result = { outcome: "UNRESOLVED", reason: "All AI providers failed." };
+                 }
+              }
+            }
         }
 
         console.log(`   Outcome: ${result?.outcome}`);
         console.log(`   Reason: ${result?.reason}`);
 
-        if (result && (result.outcome === 'YES' || result.outcome === 'NO')) {
+        if (result?.outcome === 'UNRESOLVED') {
+          console.log(`   ⚠️ AI returned UNRESOLVED. Defaulting to CANCEL to refund users and clear backlog.`);
+          result.outcome = 'CANCEL';
+        }
+
+        if (result && (result.outcome === 'YES' || result.outcome === 'NO' || result.outcome === 'CANCEL')) {
           console.log(`   ➡️ Triggering payout for ${result.outcome}...`);
           
-          // Execute resolution directly via controller
           const mockReq = { body: { market_id: market.market_id, winning_outcome: result.outcome } };
           const mockRes = { status: () => mockRes, json: (data) => data };
           const resolveData = await resolveMarket(mockReq, mockRes);
@@ -160,5 +282,3 @@ Return ONLY a JSON object in this format (no markdown, no backticks, no other te
 }
 
 export {  resolveExpiredMarkets  };
-
-// For manual testing

@@ -12,6 +12,7 @@ import { seedSpaceMarkets } from "./spaceSeeder.js";
 import { seedCongressMarkets } from "./congressSeeder.js";
 import { seedWeatherMarkets } from "./weatherSeeder.js";
 import { seedIndiaGovMarkets } from "./indiaGovSeeder.js";
+import { seedBreakingMarkets } from "./breakingSeeder.js";
 import { updateMarketOdds } from "./aiOddsUpdater.js";
 import { seedGeminiTrendingMarkets } from "./geminiTrendingSeeder.js";
 import { seedNasaMarkets } from "./nasaSeeder.js";
@@ -156,6 +157,9 @@ async function seedCricketMarkets() {
 
 async function seedAllMarkets() {
   await seedWeatherMarkets();
+  await seedEconomicsMarkets(); // World Bank API
+  await seedIMFMarkets(); // IMF API
+  await seedBreakingMarkets(); // Perplexity Sonar
 }
 
 export const startCronJobs = async (cronString) => {

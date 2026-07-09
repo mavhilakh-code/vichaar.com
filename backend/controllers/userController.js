@@ -1,84 +1,20 @@
 import { supabase } from "../utils/supabase.js";
 import bcrypt from "bcryptjs";
 
-export const claimDailyBonus = async (req, res) => {
-  try {
-    const { user_id } = req.body;
-    if (!user_id) return res.status(400).json({ success: false, message: "Missing user_id" });
-
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('total_points, last_daily_claim')
-      .eq('user_id', user_id)
-      .single();
-
-    if (userError || !user) throw userError || new Error("User not found");
-
-    const now = new Date();
-    let canClaim = false;
-
-    if (!user.last_daily_claim) {
-      canClaim = true;
-    } else {
-      const lastClaim = new Date(user.last_daily_claim);
-      // Check if last claim was before today (in local/server time for simplicity)
-      if (lastClaim.toDateString() !== now.toDateString() && lastClaim < now) {
-        canClaim = true;
-      }
-    }
-
-    if (!canClaim) {
-      return res.status(400).json({ success: false, message: "Daily bonus already claimed today." });
-    }
-
-    const newTotal = user.total_points + 50;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ total_points: newTotal, last_daily_claim: new Date().toISOString() })
-      .eq('user_id', user_id);
-
-    if (updateError) throw updateError;
-
-    // Insert Notification
-    await supabase.from('notifications').insert([{
-      user_id,
-      title: 'Daily Bonus Claimed! 🎉',
-      message: 'You successfully claimed your 50 points daily bonus. Come back tomorrow for more!'
-    }]);
-
-    return res.json({ 
-      success: true, 
-      message: "Successfully claimed 50 points!", 
-      newTotal 
-    });
-  } catch (error) {
-    console.error("Bonus Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+// Daily bonus removed — app now uses a voting-based system with no points.
 
 export const getPortfolio = async (req, res) => {
   try {
     const { user_id } = req.params;
-    
     if (!user_id) return res.status(400).json({ success: false, message: "Missing user_id" });
 
-    // Fetch user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('total_points')
-      .eq('user_id', user_id)
-      .single();
-      
-    if (userError || !user) throw userError || new Error("User not found");
-
-    // Fetch votes with joined market data
+    // Fetch all votes with market data
     const { data: votes, error: votesError } = await supabase
       .from('votes')
       .select(`
         vote_id,
         choice,
-        amount,
+        created_at,
         markets (
           market_id,
           question,
@@ -86,51 +22,45 @@ export const getPortfolio = async (req, res) => {
           winning_outcome
         )
       `)
-      .eq('user_id', user_id);
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false });
 
     if (votesError) throw votesError;
 
-    // Transform data for frontend
-    const activePositions = votes.map(v => ({
-      id: v.vote_id,
-      question: v.markets.question,
-      type: v.choice,
-      amount: v.amount,
-      status: v.markets.status,
-      winning_outcome: v.markets.winning_outcome,
-    }));
-
-    return res.json({
-      success: true,
-      liquid_points: user.total_points,
-      positions: activePositions
+    const myVotes = votes.map(v => {
+      const isResolved = v.markets.status === 'Resolved';
+      const isWinner = isResolved && v.markets.winning_outcome !== null && v.markets.winning_outcome === v.choice;
+      
+      return {
+        id: v.vote_id,
+        market_id: v.markets.market_id,
+        question: v.markets.question,
+        choice: v.choice,
+        status: v.markets.status,
+        winning_outcome: v.markets.winning_outcome,
+        isWinner: isWinner,
+        created_at: v.created_at
+      };
     });
+
+    return res.json({ success: true, votes: myVotes });
   } catch (error) {
     console.error("Portfolio Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const getLeaderboard = async (req, res) => {
   try {
-    // Fetch all users
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('user_id, username, display_name, total_points');
-      
+      .select('user_id, username, display_name');
+
     if (usersError) throw usersError;
 
-    // Fetch all votes with market status
     const { data: votes, error: votesError } = await supabase
       .from('votes')
-      .select(`
-        user_id,
-        choice,
-        markets (
-          status,
-          winning_outcome
-        )
-      `);
+      .select('user_id, choice, markets ( status, winning_outcome )');
 
     if (votesError) throw votesError;
 
@@ -140,9 +70,8 @@ export const getLeaderboard = async (req, res) => {
     });
 
     votes.forEach(v => {
-      // Only count resolved markets
       if (v.markets && v.markets.status === 'Resolved' && userStats[v.user_id]) {
-        if (v.markets.winning_outcome !== 'CANCEL') {
+        if (v.markets.winning_outcome !== null) {
           userStats[v.user_id].totalResolved++;
           if (v.choice === v.markets.winning_outcome) {
             userStats[v.user_id].correctBets++;
@@ -156,43 +85,35 @@ export const getLeaderboard = async (req, res) => {
       return { ...u, winRate };
     });
 
-    // Sort by winRate descending, then totalResolved (tiebreaker), then total_points
     leaderboard.sort((a, b) => {
       if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-      if (b.totalResolved !== a.totalResolved) return b.totalResolved - a.totalResolved;
-      return b.total_points - a.total_points;
+      return b.totalResolved - a.totalResolved;
     });
 
-    // Get top 20
-    leaderboard = leaderboard.slice(0, 20);
-
-    return res.json({ success: true, leaderboard });
+    return res.json({ success: true, leaderboard: leaderboard.slice(0, 20) });
   } catch (error) {
     console.error("Leaderboard Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const getPublicProfile = async (req, res) => {
   try {
     const { username } = req.params;
-    
-    // Fetch user details
+
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('user_id, username, display_name, total_points')
+      .select('user_id, username, display_name')
       .eq('username', username)
       .single();
 
     if (userError || !user) throw userError || new Error("User not found");
 
-    // Fetch resolved bets history to calculate win rate
     const { data: votes, error: votesError } = await supabase
       .from('votes')
       .select(`
         vote_id,
         choice,
-        amount,
         created_at,
         markets (
           market_id,
@@ -202,30 +123,18 @@ export const getPublicProfile = async (req, res) => {
         )
       `)
       .eq('user_id', user.user_id)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (votesError) throw votesError;
 
     let correctBets = 0;
     let totalResolved = 0;
-    let totalVolume = 0;
-    let cumulativeVolume = 0;
-    const chartData = [];
 
     const history = votes.map(v => {
       const isResolved = v.markets.status === 'Resolved';
       const isWinner = isResolved && v.markets.winning_outcome === v.choice;
-      
-      totalVolume += v.amount;
-      cumulativeVolume += v.amount;
-      
-      // Add data point for chart
-      chartData.push({
-        date: new Date(v.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        volume: cumulativeVolume
-      });
 
-      if (isResolved && v.markets.winning_outcome !== 'CANCEL') {
+      if (isResolved && v.markets.winning_outcome !== null) {
         totalResolved++;
         if (isWinner) correctBets++;
       }
@@ -235,16 +144,12 @@ export const getPublicProfile = async (req, res) => {
         market_id: v.markets.market_id,
         question: v.markets.question,
         choice: v.choice,
-        amount: v.amount,
         status: v.markets.status,
         winning_outcome: v.markets.winning_outcome,
         isWinner,
         created_at: v.created_at
       };
     });
-
-    // Ensure we sort history descending for the feed
-    history.reverse();
 
     const winRate = totalResolved > 0 ? Math.round((correctBets / totalResolved) * 100) : 0;
 
@@ -253,17 +158,15 @@ export const getPublicProfile = async (req, res) => {
       profile: {
         username: user.username,
         display_name: user.display_name,
-        total_points: user.total_points,
         winRate,
-        totalBets: votes.length,
-        totalVolume,
-        chartData,
+        totalVotes: votes.length,
+        totalResolved,
         history
       }
     });
   } catch (error) {
     console.error("Profile Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -284,7 +187,7 @@ export const getNotifications = async (req, res) => {
     return res.json({ success: true, notifications: data });
   } catch (error) {
     console.error("Notifications Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -304,7 +207,7 @@ export const markNotificationsRead = async (req, res) => {
     return res.json({ success: true, message: "Marked as read" });
   } catch (error) {
     console.error("Notifications Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -332,7 +235,7 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Profile Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -366,7 +269,7 @@ export const updateEmail = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Email Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -412,6 +315,6 @@ export const updatePassword = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Password Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
