@@ -59,7 +59,8 @@ async function seedWikipediaMarkets() {
 You are a prediction market creator. Read the following Wikipedia introduction for an upcoming Indian state legislative assembly election:
 "${extractText}"
 
-Generate a list of the top 3-6 major competing political parties or political alliances (e.g. BJP, INC, DMK, AIADMK, MVA, NDA, AAP, etc.) likely to contest or win this election, plus a mandatory "Independent / Other" option.
+Generate a list of ALL major competing political parties or political alliances (up to 10 parties) (e.g. BJP, INC, DMK, AIADMK, MVA, NDA, AAP, SP, BSP, etc.) likely to contest or win this election, plus a mandatory "Independent / Other" option.
+IMPORTANT: The Wikipedia text above might be very brief. Please use your own vast knowledge of Indian state politics to include ALL other prominent regional and national parties that are active in this specific state, up to a maximum of 10 parties.
 
 For each party/alliance, assign starting YES and NO points that sum exactly to 50 (e.g. yes: 10, no: 40) based on their relative strength or popularity described in the text or previous results:
 - If a party is the current ruling party or strong favorite, set it higher (e.g. yes: 25, no: 25).
