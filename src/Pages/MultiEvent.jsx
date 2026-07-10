@@ -246,19 +246,19 @@ export default function MultiEvent() {
               return (
                 <div 
                   key={market.id} 
-                  className={`flex justify-between items-center p-4 border-b border-[#2a2e33]/50 hover:bg-[#16181d] transition-colors`}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-[#2a2e33] hover:bg-[#1a1d24] transition-colors gap-4"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <span className="text-slate-500 font-mono text-sm w-4">{index + 1}</span>
-                    <img src={market.image_url || `https://ui-avatars.com/api/?name=${market.name}&background=random`} alt={market.name} className="w-10 h-10 rounded-full border border-[#2a2e33]" />
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                    <span className="text-slate-500 font-mono text-sm w-4 shrink-0">{index + 1}</span>
+                    <img src={market.image_url || `https://ui-avatars.com/api/?name=${market.name}&background=random`} alt={market.name} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#2a2e33] shrink-0" />
                     <div>
-                      <div className="font-bold text-white text-lg">{market.name}</div>
-                      <div className="text-xs text-gray-500">{market.totalVotes} votes cast</div>
+                      <div className="font-bold text-white text-base sm:text-lg leading-tight">{market.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{market.totalVotes} votes cast</div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto pl-8 sm:pl-0">
+                    <div className="flex gap-4 sm:flex-col sm:gap-0 items-center">
                       <div className="text-sm font-bold text-green-400">Y {market.yesPrice}%</div>
                       <div className="text-sm font-bold text-red-400">N {market.noPrice}%</div>
                     </div>
