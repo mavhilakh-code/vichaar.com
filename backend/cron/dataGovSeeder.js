@@ -86,11 +86,66 @@ export async function seedDataGovMarkets() {
         }
       }
     } else {
-       console.log("⚠️ No valid records found in data.gov.in response.");
+       console.log("⚠️ No valid records found in data.gov.in AQI response.");
     }
 
-    // You can add more API calls here for other datasets (like Wholesale Price Index, etc.)
-    // if their Resource IDs are known.
+    // 2. Fetch CPI / Inflation Data
+    // Using a standard Resource ID for Consumer Price Index (General)
+    const CPI_RESOURCE_ID = "1b95b8fb-41a4-44b4-a159-d3e91122a84a";
+    const cpiUrl = `https://api.data.gov.in/resource/${CPI_RESOURCE_ID}?api-key=${DATAGOV_API_KEY}&format=json&limit=10`;
+    
+    let cpiData;
+    try {
+      const resp = await axios.get(cpiUrl, { timeout: 10000 });
+      cpiData = resp.data;
+    } catch (apiError) {
+      console.error(`⚠️ data.gov.in API error (CPI): ${apiError.message}`);
+    }
+
+    if (cpiData && cpiData.records && cpiData.records.length > 0) {
+       // Just grab the latest CPI record
+       const latestRecord = cpiData.records[0];
+       
+       // Assuming the dataset has fields like 'inflation_rate' or 'general_index'
+       const cpiValue = parseFloat(latestRecord.inflation_rate || latestRecord.general_index || latestRecord.cpi_general);
+       
+       if (!isNaN(cpiValue)) {
+         // Create a market: "Will the CPI Inflation rate exceed [current+0.5]% next month?"
+         const targetInflation = (cpiValue + 0.5).toFixed(1);
+         
+         const today = new Date();
+         const targetDate = new Date(today.getFullYear(), today.getMonth() + 2, 0); // End of next month
+         const dateStr = targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+         
+         const question = `Will India's CPI Inflation exceed ${targetInflation}% for ${dateStr}?`;
+         
+         const { data: existing } = await supabase
+            .from('markets')
+            .select('market_id')
+            .eq('question', question)
+            .single();
+            
+         if (!existing) {
+            const { error } = await supabase.from('markets').insert([{
+              question: question,
+              description: `This market predicts whether India's Consumer Price Index (CPI) inflation rate will exceed ${targetInflation}% by the end of ${dateStr}. Current latest reported value is ${cpiValue}%. Data sourced from official data.gov.in statistics.`,
+              category: 'Economics',
+              image_url: getImageForQuestion(question),
+              house_yes_points: BASE_LIQUIDITY / 2,
+              house_no_points: BASE_LIQUIDITY / 2,
+              status: 'Active',
+              end_date: targetDate.toISOString()
+            }]);
+
+            if (error) {
+              console.error(`❌ Failed to insert data.gov.in CPI market:`, error);
+            } else {
+              console.log(`✅ Created data.gov.in CPI Market: ${question}`);
+              createdCount++;
+            }
+         }
+       }
+    }
 
   } catch (error) {
     console.error("❌ Error in data.gov.in seeder:", error);
