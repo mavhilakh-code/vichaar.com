@@ -7,10 +7,21 @@ export const groupMarkets = (markets) => {
     if (match) {
       const groupId = match[1];
       if (!grouped[groupId]) {
+        let rawTitle = groupId;
+        if (rawTitle.toLowerCase().startsWith('breaking-')) {
+          rawTitle = rawTitle.slice(9);
+        }
+        let formattedTitle = rawTitle;
+        if (!rawTitle.includes(' ') && rawTitle.includes('-')) {
+           formattedTitle = rawTitle.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        } else {
+           formattedTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+        }
+
         grouped[groupId] = {
           isGroup: true,
           id: groupId,
-          title: groupId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+          title: formattedTitle,
           category: m.category,
           image_url: m.image_url,
           options: []

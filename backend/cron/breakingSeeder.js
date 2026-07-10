@@ -31,8 +31,8 @@ export async function seedBreakingMarkets() {
     const prompt = `You are a prediction market creator. I will provide you with the latest breaking news headlines and summaries from India.
 Read them and generate the top 2 most interesting prediction market topics that will resolve in the near future.
 For each topic, you must generate exactly 2 resolution dates (e.g. "By Friday", "By End of Month", or "By Oct 2026", "By Dec 2026").
-Prefix the title exactly with "[GROUP:breaking-" followed by a short, readable 3-5 word summary of the event, ending with a closing bracket "] ".
-Example Title: "[GROUP:breaking-Supreme Court Grants Bail] "
+Prefix the title exactly with "[GROUP:breaking-" followed by a COMPLETE SENTENCE QUESTION asking what will happen, ending with a closing bracket "] ".
+Example Title: "[GROUP:breaking-Will the Supreme Court grant bail to the Chief Minister?] "
 The description should give brief context about why this is breaking news.
 Also provide a short image_keyword (1-2 words) for each topic that represents it visually (e.g. "parliament", "bitcoin", "temple", "court").
 Respond ONLY with a valid JSON array. No markdown, no introductory text.
@@ -43,7 +43,7 @@ ${newsSummary}
 Format exactly like this:
 [
   {
-    "title": "[GROUP:breaking-Supreme Court Bail Decision] ",
+    "title": "[GROUP:breaking-Will the Supreme Court grant bail to the Chief Minister?] ",
     "description": "Context about the breaking news...",
     "image_keyword": "supreme court",
     "options": [
