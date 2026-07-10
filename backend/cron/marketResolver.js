@@ -127,6 +127,78 @@ async function resolveIMFMarket(market) {
 }
 
 
+async function resolveDataGovMarket(market) {
+  const DATAGOV_API_KEY = process.env.DATAGOV_API_KEY;
+  if (!DATAGOV_API_KEY) return null;
+
+  console.log(`   🌐 Parsing data.gov.in Market...`);
+
+  // AQI Matcher
+  const aqiRegex = /^Will (.*?)'s AQI exceed (\d+) by (.*?)\?$/;
+  const aqiMatch = market.question.match(aqiRegex);
+  
+  if (aqiMatch) {
+    const [ , city, thresholdStr ] = aqiMatch;
+    const threshold = parseInt(thresholdStr, 10);
+    const AQI_RESOURCE_ID = "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69";
+    
+    try {
+      const url = `https://api.data.gov.in/resource/${AQI_RESOURCE_ID}?api-key=${DATAGOV_API_KEY}&format=json&limit=100`;
+      const response = await axios.get(url, { timeout: 10000 });
+      if (response.data && response.data.records) {
+        const record = response.data.records.find(r => 
+          r.city && r.city.toLowerCase() === city.toLowerCase() && r.pollutant_id === 'PM2.5'
+        ) || response.data.records.find(r => 
+          r.city && r.city.toLowerCase() === city.toLowerCase()
+        );
+
+        if (record && record.pollutant_max) {
+           const currentAqiMax = parseInt(record.pollutant_max, 10);
+           console.log(`   📊 data.gov.in AQI for ${city}: ${currentAqiMax} (Target: > ${threshold})`);
+           const isYes = currentAqiMax > threshold;
+           return {
+             outcome: isYes ? 'YES' : 'NO',
+             reason: `According to data.gov.in, the PM2.5 AQI for ${city} was ${currentAqiMax}, which is ${isYes ? '' : 'not '}greater than the threshold of ${threshold}.`
+           };
+        }
+      }
+    } catch (err) {
+      console.error("   ❌ Error fetching AQI from data.gov.in:", err.message);
+    }
+  }
+
+  // CPI Matcher
+  const cpiRegex = /^Will India's CPI Inflation exceed (.*?)% for (.*?)\?$/;
+  const cpiMatch = market.question.match(cpiRegex);
+
+  if (cpiMatch) {
+    const [ , thresholdStr ] = cpiMatch;
+    const threshold = parseFloat(thresholdStr);
+    const CPI_RESOURCE_ID = "1b95b8fb-41a4-44b4-a159-d3e91122a84a";
+
+    try {
+      const url = `https://api.data.gov.in/resource/${CPI_RESOURCE_ID}?api-key=${DATAGOV_API_KEY}&format=json&limit=10`;
+      const response = await axios.get(url, { timeout: 10000 });
+      if (response.data && response.data.records && response.data.records.length > 0) {
+        const latestRecord = response.data.records[0];
+        const cpiValue = parseFloat(latestRecord.inflation_rate || latestRecord.general_index || latestRecord.cpi_general);
+        if (!isNaN(cpiValue)) {
+           console.log(`   📊 data.gov.in CPI: ${cpiValue}% (Target: > ${threshold}%)`);
+           const isYes = cpiValue > threshold;
+           return {
+             outcome: isYes ? 'YES' : 'NO',
+             reason: `According to data.gov.in, the latest CPI Inflation is ${cpiValue}%, which is ${isYes ? '' : 'not '}greater than the threshold of ${threshold}%.`
+           };
+        }
+      }
+    } catch (err) {
+      console.error("   ❌ Error fetching CPI from data.gov.in:", err.message);
+    }
+  }
+
+  return null;
+}
+
 async function resolveExpiredMarkets() {
   console.log("🤖 [Cron] Starting Market Resolver...");
 
@@ -161,6 +233,8 @@ async function resolveExpiredMarkets() {
            result = await resolveWorldBankMarket(market);
         } else if (market.question.startsWith("[IMF]")) {
            result = await resolveIMFMarket(market);
+        } else if (market.question.includes("AQI exceed") || market.question.includes("CPI Inflation exceed")) {
+           result = await resolveDataGovMarket(market);
         }
 
         // -- EXTEND EXPIRATION IF API DATA NOT READY --
