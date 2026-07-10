@@ -16,6 +16,7 @@ import { seedBreakingMarkets } from "./breakingSeeder.js";
 import { updateMarketOdds } from "./aiOddsUpdater.js";
 import { seedGeminiTrendingMarkets } from "./geminiTrendingSeeder.js";
 import { seedNasaMarkets } from "./nasaSeeder.js";
+import { seedDataGovMarkets } from "./dataGovSeeder.js";
 import { resolveExpiredMarkets } from "./marketResolver.js";
 
 // Base Liquidity to inject into each auto-created market
@@ -160,6 +161,7 @@ async function seedAllMarkets() {
   await seedEconomicsMarkets(); // World Bank API
   await seedIMFMarkets(); // IMF API
   await seedBreakingMarkets(); // Perplexity Sonar
+  await seedDataGovMarkets(); // Data.gov.in API
 }
 
 export const startCronJobs = async (cronString) => {
