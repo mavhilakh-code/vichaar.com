@@ -26,12 +26,12 @@ export default function MultiMarketCard({ group }) {
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        {group.image_url ? (
-          <img src={group.image_url} alt="" className="w-6 h-6 rounded object-cover" />
-        ) : group.title.toLowerCase().includes('election') ? (
+        {group.title.toLowerCase().includes('election') ? (
           <div className="w-6 h-6 rounded bg-gradient-to-br from-orange-500/20 to-green-500/20 border border-[#2a2e33] flex items-center justify-center">
             <span className="text-[12px]">🇮🇳</span>
           </div>
+        ) : group.image_url ? (
+          <img src={group.image_url} alt="" className="w-6 h-6 rounded object-cover" />
         ) : (
           <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-[#2a2e33] flex items-center justify-center">
             <span className="text-[10px]">🏆</span>
