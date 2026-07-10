@@ -68,7 +68,7 @@ export async function seedDataGovMarkets() {
             const { error } = await supabase.from('markets').insert([{
               question: question,
               description: `This market predicts whether the Air Quality Index (AQI) in ${city} will exceed ${threshold} by ${dateStr}. Current max AQI is ${currentAqiMax}. Data sourced from the official Government of India Open Data Portal (data.gov.in).`,
-              category: 'Weather',
+              category: 'Politics',
               image_url: getImageForQuestion(question),
               house_yes_points: BASE_LIQUIDITY / 2,
               house_no_points: BASE_LIQUIDITY / 2,
@@ -129,7 +129,7 @@ export async function seedDataGovMarkets() {
             const { error } = await supabase.from('markets').insert([{
               question: question,
               description: `This market predicts whether India's Consumer Price Index (CPI) inflation rate will exceed ${targetInflation}% by the end of ${dateStr}. Current latest reported value is ${cpiValue}%. Data sourced from official data.gov.in statistics.`,
-              category: 'Economics',
+              category: 'Politics',
               image_url: getImageForQuestion(question),
               house_yes_points: BASE_LIQUIDITY / 2,
               house_no_points: BASE_LIQUIDITY / 2,

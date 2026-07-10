@@ -65,7 +65,7 @@ async function seedFootballMarkets() {
 
         const { error } = await supabase.from('markets').insert([{
           question: question,
-          category: 'Football',
+          category: 'Politics',
           image_url: game.competition?.emblem || 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800',
           house_yes_points: Math.round(BASE_LIQUIDITY / 3),
           house_no_points: Math.round(BASE_LIQUIDITY - (BASE_LIQUIDITY / 3)),
@@ -132,7 +132,7 @@ async function seedCricketMarkets() {
 
         const { error } = await supabase.from('markets').insert([{
           question: question,
-          category: 'Cricket',
+          category: 'Politics',
           image_url: imageUrl,
           house_yes_points: BASE_LIQUIDITY / 2,
           house_no_points: BASE_LIQUIDITY / 2,

@@ -63,7 +63,7 @@ async function seedEconomicsMarkets() {
           const { error } = await supabase.from('markets').insert([{
             question: question,
             description: description,
-            category: 'Economics', // Change from Politics to Economics
+            category: 'Politics', // Change from Politics to Economics
             image_url: country.flag,
             house_yes_points: BASE_LIQUIDITY / 2,
             house_no_points: BASE_LIQUIDITY / 2,

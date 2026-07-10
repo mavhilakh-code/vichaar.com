@@ -10,10 +10,10 @@ const WIKI_QUERIES = [
   { term: 'intitle:2026 election European Union', category: 'Politics', icon: '🇪🇺' },
   { term: 'intitle:2026 election United States', category: 'Politics', icon: '🇺🇸' },
   { term: 'intitle:2026 election China', category: 'Politics', icon: '🇨🇳' },
-  { term: 'intitle:2026 sports India', category: 'Sports', icon: '🏏' },
-  { term: 'intitle:2026 sports European', category: 'Sports', icon: '⚽' },
-  { term: 'intitle:2026 in spaceflight', category: 'Science', icon: '🚀' },
-  { term: 'intitle:2026 in science', category: 'Science', icon: '🔬' }
+  { term: 'intitle:2026 sports India', category: 'Politics', icon: '🏏' },
+  { term: 'intitle:2026 sports European', category: 'Politics', icon: '⚽' },
+  { term: 'intitle:2026 in spaceflight', category: 'Politics', icon: '🚀' },
+  { term: 'intitle:2026 in science', category: 'Politics', icon: '🔬' }
 ];
 
 async function seedWikipediaMarkets() {
