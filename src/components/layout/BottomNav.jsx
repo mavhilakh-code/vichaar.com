@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Radio, PieChart, User } from 'lucide-react';
+import { Compass, Search, PieChart, User } from 'lucide-react';
 
 export default function BottomNav() {
   const location = useLocation();
@@ -15,7 +15,7 @@ export default function BottomNav() {
 
   const navItems = [
     { name: 'Browse', path: '/', icon: Compass },
-    { name: 'Live', path: '/live', icon: Radio },
+    { name: 'Search', path: '/search', icon: Search },
     { name: 'Portfolio', path: '/portfolio', icon: PieChart },
     { name: 'Profile', path: user ? `/user/${user.username}` : '/login', icon: User },
   ];

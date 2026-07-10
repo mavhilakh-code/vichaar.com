@@ -22,6 +22,7 @@ import BottomNav from "./components/layout/BottomNav";
 import Footer from "./components/layout/Footer";
 import About from "./Pages/About";
 import CityWeather from "./Pages/CityWeather";
+import SearchMobile from "./Pages/SearchMobile";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             <Route path="/sports" element={<Sports />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/live" element={<LiveActivity />} />
+            <Route path="/search" element={<SearchMobile />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/about" element={<About />} />
             <Route path="/weather/:city" element={<CityWeather />} />
