@@ -23,14 +23,14 @@ export default function MultiMarketCard({ group }) {
 
   const handleClick = (e) => {
     if (e) e.stopPropagation();
-    navigate(`/event/${group.id}`);
+    navigate(`/event/${encodeURIComponent(group.id)}`);
   };
 
   const handleRowClick = (e, optionId) => {
     e.stopPropagation();
     // In grouped markets, we always want to take the user to the unified event page 
     // where they can see all dates/options together, rather than an isolated single market page.
-    navigate(`/event/${group.id}`);
+    navigate(`/event/${encodeURIComponent(group.id)}`);
   };
 
   const totalGroupVotes = group.options.reduce(
