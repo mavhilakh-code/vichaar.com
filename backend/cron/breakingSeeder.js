@@ -29,11 +29,12 @@ export async function seedBreakingMarkets() {
     const groq = new Groq({ apiKey: groqKey });
     
     const prompt = `You are a prediction market creator. I will provide you with the latest breaking news headlines and summaries from India.
-Read them and generate the top 3 most interesting binary (Yes/No) prediction market questions that will resolve within the next 3 to 7 days.
-Prefix each question exactly with "[Breaking] ".
-The description should give brief context about why this is breaking news based on the summary provided.
-The end_date must be in ISO format (YYYY-MM-DDTHH:MM:SSZ) and be between 3 and 7 days from now.
-Also provide a short image_keyword (1-2 words) for each market that represents the topic visually, e.g. "parliament", "bitcoin", "temple", "social media".
+Read them and generate the top 2 most interesting prediction market topics that will resolve in the near future.
+For each topic, you must generate exactly 2 resolution dates (e.g. "By Friday", "By End of Month", or "By Oct 2026", "By Dec 2026").
+Prefix the title exactly with "[GROUP:breaking-" followed by a short, readable 3-5 word summary of the event, ending with a closing bracket "] ".
+Example Title: "[GROUP:breaking-Supreme Court Grants Bail] "
+The description should give brief context about why this is breaking news.
+Also provide a short image_keyword (1-2 words) for each topic that represents it visually (e.g. "parliament", "bitcoin", "temple", "court").
 Respond ONLY with a valid JSON array. No markdown, no introductory text.
 
 Headlines:
@@ -42,14 +43,17 @@ ${newsSummary}
 Format exactly like this:
 [
   {
-    "question": "[Breaking] Will the Supreme Court grant bail to [Person] by Friday?",
+    "title": "[GROUP:breaking-Supreme Court Bail Decision] ",
     "description": "Context about the breaking news...",
-    "end_date": "2024-11-20T23:59:59Z",
-    "image_keyword": "supreme court"
+    "image_keyword": "supreme court",
+    "options": [
+      { "name": "By Friday", "end_date": "2026-10-20T23:59:59Z" },
+      { "name": "By End of Month", "end_date": "2026-10-31T23:59:59Z" }
+    ]
   }
 ]`;
 
-    console.log("🧠 Asking Groq to generate breaking markets...");
+    console.log("🧠 Asking Groq to generate grouped breaking markets...");
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.3-70b-versatile',
@@ -73,47 +77,51 @@ Format exactly like this:
     }
 
     let insertedCount = 0;
-    for (const m of markets) {
-      // Validate date
-      const endDate = new Date(m.end_date);
-      if (isNaN(endDate.getTime()) || endDate < new Date()) {
-        console.warn("Skipping market with invalid or past end_date:", m.question);
-        continue;
+    for (const group of markets) {
+      let title = group.title;
+      if (!title.startsWith("[GROUP:breaking-")) {
+        // Fallback safety if Groq forgets the exact format
+        title = `[GROUP:breaking-${Date.now()}] `;
       }
 
-      // Ensure prefix
-      let question = m.question;
-      if (!question.startsWith("[Breaking]")) {
-        question = "[Breaking] " + question;
-      }
+      for (const opt of (group.options || [])) {
+        // Validate date
+        const endDate = new Date(opt.end_date);
+        if (isNaN(endDate.getTime()) || endDate < new Date()) {
+          console.warn("Skipping option with invalid or past end_date:", opt.name);
+          continue;
+        }
 
-      // Check if already exists to prevent duplicates
-      const { data: existing } = await supabase.from('markets').select('market_id').eq('question', question).single();
-      if (existing) continue;
+        const fullQuestion = `${title.trim()} ${opt.name}`;
 
-      const { error } = await supabase.from('markets').insert({
-        question: question,
-        description: m.description,
-        category: 'Politics', // Map to Politics for DB constraint, frontend overrides to Breaking
-        end_date: m.end_date,
-        image_url: m.image_keyword
-          ? `https://source.unsplash.com/400x200/?${encodeURIComponent(m.image_keyword)}`
-          : `https://source.unsplash.com/400x200/?breaking+news+india`,
-        status: 'Active',
-        house_yes_points: 0,
-        house_no_points: 0,
-        created_at: new Date().toISOString()
-      });
+        // Check if already exists to prevent duplicates
+        const { data: existing } = await supabase.from('markets').select('market_id').eq('question', fullQuestion).single();
+        if (existing) continue;
 
-      if (error) {
-        console.error("❌ Failed to insert market:", question, error);
-      } else {
-        insertedCount++;
-        console.log(`✅ Created breaking market: ${question}`);
+        const { error } = await supabase.from('markets').insert({
+          question: fullQuestion,
+          description: group.description,
+          category: 'Politics', // Map to Politics for DB constraint, frontend overrides to Breaking
+          end_date: opt.end_date,
+          image_url: group.image_keyword
+            ? `https://source.unsplash.com/400x200/?${encodeURIComponent(group.image_keyword)}`
+            : `https://source.unsplash.com/400x200/?breaking+news+india`,
+          status: 'Active',
+          house_yes_points: 0,
+          house_no_points: 0,
+          created_at: new Date().toISOString()
+        });
+
+        if (error) {
+          console.error("❌ Failed to insert grouped market:", fullQuestion, error);
+        } else {
+          insertedCount++;
+          console.log(`✅ Created breaking group option: ${fullQuestion}`);
+        }
       }
     }
 
-    console.log(`🏁 [Cron] Breaking News Seeder finished. Created ${insertedCount} markets.`);
+    console.log(`🏁 [Cron] Breaking News Seeder finished. Created ${insertedCount} grouped markets.`);
 
   } catch (error) {
     console.error("❌ Breaking News Seeder error:", error.message);
