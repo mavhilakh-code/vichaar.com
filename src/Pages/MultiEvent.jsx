@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../services/supabase';
-import { calculateSmoothedPercentages, getTrueVolume } from '../utils/marketUtils';
+import { calculateSmoothedPercentages, getTrueVolume, groupMarkets } from '../utils/marketUtils';
 import { Trophy, Info, Calendar } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://vichaar-backend.avhilakh.workers.dev');
@@ -37,6 +37,7 @@ export default function MultiEvent() {
   const { event_id } = useParams();
   const [markets, setMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [eventTitle, setEventTitle] = useState(null);
 
   // Votes state for the logged-in user
   const [myVotes, setMyVotes] = useState({});
@@ -59,9 +60,30 @@ export default function MultiEvent() {
         .ilike("question", searchString);
         
       if (ms && ms.length > 0) {
-        const activeMs = ms.filter(m => m.status === 'Active');
-        const formatted = (activeMs.length > 0 ? activeMs : ms).map(formatMarket).sort((a, b) => b.yesPrice - a.yesPrice);
+        // Use groupMarkets to get the correct title and shortened option names
+        const grouped = groupMarkets(ms);
+        const groupData = grouped[0] || {};
+        
+        let processedMs = ms;
+        let derivedTitle = null;
+
+        if (groupData && groupData.isGroup) {
+          derivedTitle = groupData.title;
+          // groupData.options contains the markets with shortened .name
+          processedMs = groupData.options.map(opt => {
+             // Overwrite question with the shortened name so formatMarket uses it
+             return { ...opt, original_question: opt.question, question: '[GROUP:dummy] ' + opt.name };
+          });
+        }
+
+        const activeMs = processedMs.filter(m => m.status === 'Active');
+        const formatted = (activeMs.length > 0 ? activeMs : processedMs).map(formatMarket).sort((a, b) => b.yesPrice - a.yesPrice);
         setMarkets(formatted);
+        
+        // Pass the derived title to a state to display it
+        if (derivedTitle) {
+           setEventTitle(derivedTitle);
+        }
 
         const stableId = [...formatted].sort((a, b) => a.id.localeCompare(b.id))[0].id;
         setStableMarketId(stableId);
@@ -184,12 +206,14 @@ export default function MultiEvent() {
   const description = markets[0]?.description;
   const displayCategory = markets[0]?.category || 'Multiple Choice';
 
+  const displayTitle = eventTitle || title;
+
   return (
     <div className="min-h-screen bg-[#0e1014] text-white">
       {/* Banner */}
       <div className="w-full h-48 md:h-64 relative overflow-hidden bg-[#111317]">
         {bannerUrl ? (
-          <img src={bannerUrl} alt={title} className="w-full h-full object-cover opacity-60" />
+          <img src={bannerUrl} alt={displayTitle} className="w-full h-full object-cover opacity-60" />
         ) : (
           <div className="w-full h-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10" />
         )}
@@ -207,7 +231,7 @@ export default function MultiEvent() {
               {displayCategory}
             </span>
             <h1 className="text-3xl md:text-4xl font-bold text-white max-w-3xl leading-tight">
-              {title}
+              {displayTitle}
             </h1>
           </div>
           
@@ -319,7 +343,7 @@ export default function MultiEvent() {
               type="text" 
               value={newComment} 
               onChange={(e) => setNewComment(e.target.value)} 
-              placeholder={`Discuss ${title}...`} 
+              placeholder={`Discuss ${displayTitle}...`} 
               disabled={!currentUser}
               className="flex-grow min-w-0 bg-[#16181d] border border-[#2a2e33] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500 transition-colors disabled:opacity-50"
             />
