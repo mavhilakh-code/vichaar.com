@@ -155,7 +155,6 @@ async function seedCricketMarkets() {
 }
 
 async function seedAllMarkets() {
-  await seedWeatherMarkets();
   await seedEconomicsMarkets(); // World Bank API
   await seedIMFMarkets(); // IMF API
   await seedBreakingMarkets(); // Perplexity Sonar

@@ -60,7 +60,7 @@ function Home() {
         displayCategory = 'Economics';
       } else if (q.includes('space') || q.includes('science') || q.includes('launch') || q.includes('asteroid') || q.includes('nasa') || q.includes('solar') || q.includes('aurora') || q.includes('wildfire') || q.includes('typhoon') || q.includes('storm')) {
         displayCategory = 'Science';
-      } else if (q.includes('temperature') || q.includes('precipitation') || q.includes('rain') || q.includes('°c') || q.includes('weather')) {
+      } else if (q.includes('temperature') || q.includes('precipitation') || q.includes('rain') || q.includes('°c') || q.includes('weather') || q.includes('aqi')) {
         displayCategory = 'Weather';
       } else if (q.includes('sports') || q.includes('football') || q.includes('cricket') || q.match(/\[group:(.*?)-vs-(.*?)\]/)) {
         displayCategory = 'Sports';
