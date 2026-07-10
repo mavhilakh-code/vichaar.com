@@ -128,7 +128,7 @@ Return a JSON object exactly in this format, with no markdown formatting or back
               question: fullQuestion,
               description: desc,
               category: 'Politics', // Maps to Politics in DB, frontend handles Elections tag
-              image_url: getImageForQuestion(fullQuestion),
+              image_url: null,
               house_yes_points: opt.yes,
               house_no_points: opt.no,
               status: 'Active',
