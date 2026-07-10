@@ -1,10 +1,36 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { calculateSmoothedPercentages } from '../utils/marketUtils';
 import { Trophy, Info, Calendar } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://vichaar-backend.avhilakh.workers.dev');
+
+function formatMarket(m) {
+  const { yes, no, totalVotes } = calculateSmoothedPercentages(m.house_yes_points, m.house_no_points);
+  
+  const nameMatch = m.question.match(/\] (.*)$/);
+  const optionName = nameMatch ? nameMatch[1] : m.question;
+
+  let displayCategory = m.category;
+  if (m.question.toLowerCase().startsWith('[group:breaking-')) {
+    displayCategory = 'Breaking';
+  }
+
+  return {
+    id: m.market_id,
+    name: optionName,
+    yesPrice: yes,
+    noPrice: no,
+    totalVotes: totalVotes,
+    image_url: m.image_url,
+    end_date: m.end_date,
+    status: m.status,
+    winning_outcome: m.winning_outcome,
+    description: m.description,
+    category: displayCategory
+  };
+}
 
 export default function MultiEvent() {
   const { event_id } = useParams();
@@ -98,25 +124,6 @@ export default function MultiEvent() {
     return () => supabase.removeChannel(commentSub);
   }, [stableMarketId]);
 
-  const formatMarket = (m) => {
-    const { yes, no, totalVotes } = calculateSmoothedPercentages(m.house_yes_points, m.house_no_points);
-    
-    const nameMatch = m.question.match(/\] (.*)$/);
-    const optionName = nameMatch ? nameMatch[1] : m.question;
-
-    return {
-      id: m.market_id,
-      name: optionName,
-      yesPrice: yes,
-      noPrice: no,
-      totalVotes: totalVotes,
-      image_url: m.image_url,
-      end_date: m.end_date,
-      status: m.status,
-      winning_outcome: m.winning_outcome
-    };
-  };
-
   const handleVote = async (marketId, choice) => {
     if (!currentUser) { alert("Please login to vote."); return; }
     setVoteLoading(true);
@@ -163,33 +170,51 @@ export default function MultiEvent() {
 
   const title = event_id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const totalEventVotes = markets.reduce((acc, m) => acc + m.totalVotes, 0);
+  const bannerUrl = markets[0]?.image_url;
+  const description = markets[0]?.description;
+  const displayCategory = markets[0]?.category || 'Multiple Choice';
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full animate-fade-in-up grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
-      
-      {/* Left Column: List */}
-      <div className="lg:col-span-2 flex flex-col gap-6">
+    <div className="min-h-screen bg-[#0e1014] text-white">
+      {/* Banner */}
+      <div className="w-full h-48 md:h-64 relative overflow-hidden bg-[#111317]">
+        {bannerUrl ? (
+          <img src={bannerUrl} alt={title} className="w-full h-full object-cover opacity-60" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0e1014] via-[#0e1014]/60 to-transparent" />
         
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div className="flex gap-4 items-center">
-            <div className="w-12 h-12 rounded-lg bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30">
-              <Trophy size={24} className="text-yellow-500" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">{title}</h1>
-            </div>
+        {/* Banner Content */}
+        <div className="absolute bottom-6 left-6 right-6 max-w-7xl mx-auto flex items-end justify-between">
+          <div>
+            <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-3 inline-flex items-center gap-1.5 ${
+              displayCategory === 'Breaking' 
+                ? 'bg-[#111317]/80 backdrop-blur-sm border border-red-500/30 text-red-400' 
+                : 'bg-indigo-500 text-white'
+            }`}>
+              {displayCategory === 'Breaking' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+              {displayCategory}
+            </span>
+            <h1 className="text-3xl md:text-4xl font-bold text-white max-w-3xl leading-tight">
+              {title}
+            </h1>
           </div>
-          {markets[0]?.end_date && (
-            <div className="flex items-center gap-2 bg-[#111317] border border-[#2a2e33] px-4 py-2 rounded-lg text-slate-300 text-sm font-bold">
-              <Calendar size={16} className="text-blue-400" />
-              <span>Resolves: {new Date(markets[0].end_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-              {new Date(markets[0].end_date) < new Date() && (
-                 <span className="ml-2 bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs border border-red-500/30">CLOSED</span>
-              )}
-            </div>
-          )}
+          
+          <div className="hidden md:flex gap-3">
+             <div className="bg-[#111317]/80 backdrop-blur-sm border border-[#2a2e33] rounded-xl px-4 py-2 flex flex-col items-end">
+               <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Group Volume</span>
+               <span className="text-lg font-bold text-indigo-400">{totalEventVotes} votes</span>
+             </div>
+          </div>
         </div>
+      </div>
+
+      <div className="p-6 max-w-7xl mx-auto w-full animate-fade-in-up grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+        
+        {/* Left Column: List & Discussion */}
+        <div className="lg:col-span-2 flex flex-col gap-8">
+
         
         {/* Options List */}
         <div className="bg-[#111317] border border-[#2a2e33] rounded-2xl overflow-hidden mt-4">
@@ -261,6 +286,18 @@ export default function MultiEvent() {
             })}
           </div>
         </div>
+
+        {/* About Section */}
+        <div>
+          <h2 className="text-lg font-bold text-white mb-4">About this event</h2>
+          <div className="bg-[#111317] border border-[#2a2e33] rounded-2xl p-6 text-slate-300 text-sm leading-relaxed">
+            {description ? (
+              <p>{description}</p>
+            ) : (
+              <p className="italic opacity-50">No description provided for this multi-date event.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Comment Section */}
@@ -302,6 +339,7 @@ export default function MultiEvent() {
             ))}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
