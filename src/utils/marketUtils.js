@@ -45,8 +45,13 @@ export const groupMarkets = (markets) => {
       const qMarkIndex = sampleOption.lastIndexOf('?');
       
       if (qMarkIndex !== -1 && qMarkIndex < sampleOption.length - 1) {
-        // The title is everything up to and including the last '?' before options
-        item.title = sampleOption.substring(0, qMarkIndex + 1).trim();
+        // Determine if the options are date-based starting with "By "
+        const remainder = sampleOption.substring(qMarkIndex + 1).trim();
+        const isByOption = remainder.toLowerCase().startsWith('by ');
+        
+        // The title is everything up to the last '?' before options
+        const baseTitle = sampleOption.substring(0, qMarkIndex).trim();
+        item.title = isByOption ? `${baseTitle} by...?` : `${baseTitle}?`;
         
         // The option name is everything after the '?'
         item.options = item.options.map(opt => {
