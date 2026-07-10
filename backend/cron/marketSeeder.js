@@ -159,6 +159,7 @@ async function seedAllMarkets() {
   await seedIMFMarkets(); // IMF API
   await seedBreakingMarkets(); // Perplexity Sonar
   await seedDataGovMarkets(); // Data.gov.in API
+  await seedWikipediaMarkets(); // Wikipedia elections seeder
 }
 
 export const startCronJobs = async (cronString) => {
