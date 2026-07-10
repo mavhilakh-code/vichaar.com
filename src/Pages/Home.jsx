@@ -49,7 +49,7 @@ function Home() {
     const q = (market.question || '').toLowerCase();
     
     // Override category for bypassed markets
-    if (q.startsWith('[breaking]')) {
+    if (q.startsWith('[breaking]') || q.startsWith('[group:breaking-')) {
       displayCategory = 'Breaking';
     } else if (displayCategory === 'Politics') {
       if (q.includes('gdp') || q.includes('inflation') || q.includes('cpi') || q.includes('unemployment') || q.includes('current account') || q.includes('gst') || q.includes('budget') || q.includes('tax') || q.includes('pm-kisan') || q.includes('economy') || q.includes('fed') || q.includes('reserve') || q.includes('jobs') || q.includes('stock') || q.includes('market') || q.includes('trade')) {
