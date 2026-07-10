@@ -17,7 +17,7 @@ export default function MultiMarketCard({ group }) {
     return bPct - aPct;
   });
 
-  const totalGroupVotes = group.options.reduce((sum, opt) => sum + calculateSmoothedPercentages(opt.house_yes_points, opt.house_no_points).totalVotes, 0);
+  const totalGroupVotes = group.options.reduce((sum, opt) => sum + Math.max(0, calculateSmoothedPercentages(opt.house_yes_points, opt.house_no_points).totalVotes - 200), 0);
 
   return (
     <div 

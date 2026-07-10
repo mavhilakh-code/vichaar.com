@@ -44,7 +44,7 @@ export default function MarketCard({ market }) {
       {/* Stats */}
       <div className="flex items-center justify-between text-sm mt-auto mb-4 border-b border-[#2a2e33] pb-4">
         <span className="text-white font-bold text-2xl">{yes}% <span className="text-gray-500 text-sm font-normal">chance</span></span>
-        <span className="text-gray-500 font-mono text-xs">{totalVotes} Votes</span>
+        <span className="text-gray-500 font-mono text-xs">{Math.max(0, totalVotes - 200)} Votes</span>
       </div>
       
       {/* Buttons or Status */}

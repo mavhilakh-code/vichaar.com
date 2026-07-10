@@ -168,8 +168,17 @@ export default function MultiEvent() {
   if (loading) return <div className="p-10 text-center text-slate-400">Loading Event...</div>;
   if (markets.length === 0) return <div className="p-10 text-center text-red-500">Event not found</div>;
 
-  const title = event_id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  const totalEventVotes = markets.reduce((acc, m) => acc + m.totalVotes, 0);
+  let rawTitle = event_id;
+  if (rawTitle.toLowerCase().startsWith('breaking-')) {
+    rawTitle = rawTitle.slice(9);
+  }
+  let title = rawTitle;
+  if (!rawTitle.includes(' ') && rawTitle.includes('-')) {
+     title = rawTitle.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  } else {
+     title = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+  }
+  const totalEventVotes = markets.reduce((acc, m) => acc + Math.max(0, m.totalVotes - 200), 0);
   const bannerUrl = markets[0]?.image_url;
   const description = markets[0]?.description;
   const displayCategory = markets[0]?.category || 'Multiple Choice';
