@@ -1,54 +1,64 @@
 import { supabase } from '../utils/supabase.js';
+import axios from 'axios';
+import Groq from 'groq-sdk';
 
 export async function seedBreakingMarkets() {
-  console.log("🚀 [Cron] Starting Breaking News Seeder (Perplexity Sonar)...");
+  console.log("🚀 [Cron] Starting Breaking News Seeder (Groq + GNews)...");
 
   try {
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
-    if (!openRouterKey) {
-      throw new Error("Missing OPENROUTER_API_KEY");
+    const groqKey = process.env.GROQ_API_KEY;
+    const gnewsKey = process.env.GNEWS_API_KEY;
+    
+    if (!groqKey || !gnewsKey) {
+      throw new Error("Missing GROQ_API_KEY or GNEWS_API_KEY");
     }
 
-    const prompt = `You are a prediction market creator with live internet access. 
-Search for the top 3 biggest breaking news stories in India right now (politics, business, crypto, law, etc). 
-Generate a binary (Yes/No) prediction market question for each that will resolve within the next 3 to 7 days.
+    // 1. Fetch Live Breaking News for India
+    console.log("📡 Fetching live breaking news from GNews...");
+    const gnewsRes = await axios.get(`https://gnews.io/api/v4/top-headlines?category=breaking-news&country=in&lang=en&max=10&apikey=${gnewsKey.trim()}`);
+    
+    const articles = gnewsRes.data.articles || [];
+    if (articles.length === 0) {
+      console.log("No breaking news found at this moment.");
+      return;
+    }
+
+    const newsSummary = articles.map(a => `- ${a.title}: ${a.description}`).join("\n");
+    
+    // 2. Pass to Groq (Llama 3.3 70B) to generate markets
+    const groq = new Groq({ apiKey: groqKey });
+    
+    const prompt = `You are a prediction market creator. I will provide you with the latest breaking news headlines and summaries from India.
+Read them and generate the top 3 most interesting binary (Yes/No) prediction market questions that will resolve within the next 3 to 7 days.
 Prefix each question exactly with "[Breaking] ".
-The description should give brief context about why this is breaking news.
+The description should give brief context about why this is breaking news based on the summary provided.
 The end_date must be in ISO format (YYYY-MM-DDTHH:MM:SSZ) and be between 3 and 7 days from now.
+Also provide a short image_keyword (1-2 words) for each market that represents the topic visually, e.g. "parliament", "bitcoin", "temple", "social media".
 Respond ONLY with a valid JSON array. No markdown, no introductory text.
+
+Headlines:
+${newsSummary}
+
 Format exactly like this:
 [
   {
     "question": "[Breaking] Will the Supreme Court grant bail to [Person] by Friday?",
     "description": "Context about the breaking news...",
-    "end_date": "2024-11-20T23:59:59Z"
+    "end_date": "2024-11-20T23:59:59Z",
+    "image_keyword": "supreme court"
   }
 ]`;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openRouterKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "perplexity/sonar",
-        messages: [
-          { role: "system", content: "You are a JSON-only bot. Only output valid JSON arrays. Do not wrap in markdown blocks." },
-          { role: "user", content: prompt }
-        ]
-      })
+    console.log("🧠 Asking Groq to generate breaking markets...");
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.3,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`OpenRouter API error: ${response.status} ${errText}`);
-    }
-
-    const data = await response.json();
-    let content = data.choices[0].message.content.trim();
+    let content = chatCompletion.choices[0]?.message?.content || "";
     
-    // Strip markdown formatting if Perplexity ignores the system prompt
+    // Strip markdown formatting
     if (content.startsWith("```json")) content = content.slice(7);
     if (content.startsWith("```")) content = content.slice(3);
     if (content.endsWith("```")) content = content.slice(0, -3);
@@ -58,7 +68,7 @@ Format exactly like this:
     try {
       markets = JSON.parse(content);
     } catch (err) {
-      console.error("❌ Failed to parse JSON from Perplexity:", content);
+      console.error("❌ Failed to parse JSON from Groq:", content);
       return;
     }
 
@@ -77,12 +87,18 @@ Format exactly like this:
         question = "[Breaking] " + question;
       }
 
+      // Check if already exists to prevent duplicates
+      const { data: existing } = await supabase.from('markets').select('market_id').eq('question', question).single();
+      if (existing) continue;
+
       const { error } = await supabase.from('markets').insert({
         question: question,
         description: m.description,
-        category: 'Politics',
+        category: 'Politics', // Map to Politics for DB constraint, frontend overrides to Breaking
         end_date: m.end_date,
-        image_url: `https://ui-avatars.com/api/?name=Breaking&background=random&color=fff`,
+        image_url: m.image_keyword
+          ? `https://source.unsplash.com/400x200/?${encodeURIComponent(m.image_keyword)}`
+          : `https://source.unsplash.com/400x200/?breaking+news+india`,
         status: 'Active',
         house_yes_points: 0,
         house_no_points: 0,
