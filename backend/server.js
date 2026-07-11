@@ -1,15 +1,15 @@
-require("dotenv").config();
+import 'dotenv/config';
 
-const express = require("express");
-const cors = require("cors");
+import express from 'express';
+import cors from 'cors';
 
-const authRoutes = require("./routes/auth");
-const marketsRoutes = require("./routes/markets");
-const userRoutes = require("./routes/user");
-const chartRoutes = require("./routes/charts");
-const commentRoutes = require("./routes/comments");
-const walletRoutes = require("./routes/wallet");
-const { startCronJobs } = require('./cron/marketSeeder');
+import authRoutes from './routes/auth.js';
+import marketsRoutes from './routes/markets.js';
+import userRoutes from './routes/user.js';
+import chartRoutes from './routes/charts.js';
+import commentRoutes from './routes/comments.js';
+import walletRoutes from './routes/wallet.js';
+import { startCronJobs } from './cron/marketSeeder.js';
 
 const app = express();
 
