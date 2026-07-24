@@ -8,7 +8,7 @@ import { seedIMFMarkets } from "./imfSeeder.js";
 import { seedFinanceMarkets } from "./financeSeeder.js";
 import { seedWikipediaMarkets } from "./wikipediaSeeder.js";
 import { seedSpaceMarkets } from "./spaceSeeder.js";
-import { seedWeatherMarkets } from "./weatherSeeder.js";
+
 import { seedIndiaGovMarkets } from "./indiaGovSeeder.js";
 import { seedBreakingMarkets } from "./breakingSeeder.js";
 import { updateMarketOdds } from "./aiOddsUpdater.js";
